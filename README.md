@@ -184,6 +184,10 @@ Assuming databases :default and :foobar we can do selects against both of them.
 (db/query db :foobar "select * from foo where id > ?" [0]) ;; => [{:id 42 :what_p "How many bars does it take for foo to be happy?"}]
 ```
 
+## missing
+
+No good support for rollbacks yet.
+
 ## License
 
 Copyright © 2015 Emil Bengtsson
