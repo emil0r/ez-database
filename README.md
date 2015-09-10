@@ -44,7 +44,7 @@ INSERT INTO test VALUES (0), (42);
               :subprotocol "postgresql"
               :subname "//localhost:5432/test"
               :user "user"
-              :password "password"}})
+              :password "password"})
 
 ;; add extra database specs under different keys
 ;; default is a required key
