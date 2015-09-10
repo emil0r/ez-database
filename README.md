@@ -167,13 +167,13 @@ Assuming databases :default and :foobar we can do selects against both of them.
               :subprotocol "postgresql"
               :subname "//localhost:5432/test"
               :user "user"
-              :password "password"}})
+              :password "password"})
               
 (def db-spec-foo {:classname "org.postgresql.Driver"
                   :subprotocol "postgresql"
                   :subname "//localhost:5432/foobar"
                   :user "user"
-                 :password "password"}})
+                  :password "password"})
 
 ;; add extra database specs under different keys
 ;; default is a required key
