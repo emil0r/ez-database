@@ -2,6 +2,7 @@
   (:require [ez-database.core :as db]
             [ez-database.test.core :refer [reset-db! db-spec db-spec-2]]
             [midje.sweet :refer :all]
+            [slingshot.slingshot :refer [try+]]
             [yesql.core :refer [defqueries]]))
 
 (defqueries "queries/test.sql")
@@ -9,10 +10,19 @@
 
 (fact
  (let [db (db/map->EzDatabase {:db-specs {:default db-spec
-                                          :extra db-spec-2}})]
+                                          :extra db-spec-2}})
+       reset-db? true]
+
+   (fact "nil"
+         (try+ (db/query db nil)
+               (catch [:type :ez-database.core/try-query] {{msg :msg} :exception}
+                 msg))
+
+         => "nil can't be run as a query")
 
    (fact "string"
-         (reset-db!)
+         (when reset-db?
+           (reset-db!))
          (fact "string"
                (->> "select id from test order by id;"
                     (db/query db)
@@ -37,7 +47,8 @@
                  [r ids] => [[1] [-3 0 42]])))
 
    (fact "sequential"
-         (reset-db!)
+         (when reset-db?
+           (reset-db!))
          (fact "select"
                (->> ["select id from test order by id;"]
                     (db/query db)
@@ -62,7 +73,8 @@
                               (map :id))]
                  [r ids] => [[1] [0 42]])))
    (fact "function"
-         (reset-db!)
+         (when reset-db?
+           (reset-db!))
          (fact "select"
                (->> sql-fn-query
                     (db/query db)
@@ -83,7 +95,8 @@
                               (map :id))]
                  [r ids] => [1 [-1 0 42]])))
    (fact "hashmap"
-         (reset-db!)
+         (when reset-db?
+           (reset-db!))
          (fact "select"
                (->> {:select [:id]
                      :from [:test]
@@ -110,7 +123,8 @@
                  [r ids] => [[1] [-2 0 42]])))
 
    (fact "extra db"
-         (reset-db!)
+         (when reset-db?
+           (reset-db!))
          (fact "insert with string"
                (db/query! db :extra "insert into test values (?), (?);" [0 42]))
          (fact "select with string"

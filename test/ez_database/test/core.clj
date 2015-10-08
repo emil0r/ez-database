@@ -25,13 +25,13 @@
 (def mmap {:db {:type :sql
                 :url "jdbc:postgresql://localhost:5432/dev_ez_database?user=devuser&password=devuser"
                 :db-spec db-spec}
-           :migrator "resources/migrations/postgresql/"
+           :migrator "resources/migrations/ezdb/postgresql/"
            :seed "ez-database.test.core/run"})
 
 (def mmap-2 {:db {:type :sql
                   :url "jdbc:postgresql://localhost:5432/dev_ez_database_2?user=devuser&password=devuser"
                   :db-spec db-spec}
-             :migrator "resources/migrations/postgresql/"})
+             :migrator "resources/migrations/ezdb/postgresql/"})
 
 (defn reset-db! []
   (joplin/rollback-db mmap 9999)
