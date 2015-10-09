@@ -34,9 +34,10 @@
              :migrator "resources/migrations/ezdb/postgresql/"})
 
 (defn reset-db! []
-  (joplin/rollback-db mmap 9999)
-  (joplin/migrate-db mmap)
-  (joplin/seed-db mmap)
+  (with-out-str
+    (joplin/rollback-db mmap 9999)
+    (joplin/migrate-db mmap)
+    (joplin/seed-db mmap)
 
-  (joplin/rollback-db mmap-2 9999)
-  (joplin/migrate-db mmap-2))
+    (joplin/rollback-db mmap-2 9999)
+    (joplin/migrate-db mmap-2)))

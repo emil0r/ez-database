@@ -57,6 +57,10 @@
                (->> (list "select id from test where id > ? and id < ? order by id;" 0 30)
                     (db/query db)
                     (map :id)) => [])
+         (fact "select with lazyseq"
+               (->> (map identity ["select id from test where id > ? and id < ? order by id;" 0 50])
+                    (db/query db)
+                    (map :id)) => [42])
          (fact "select with args"
                (->> (db/query db (list "select id from test where id > ? and id < ? order by id;") [0 50])
                     (map :id)) => [42])
