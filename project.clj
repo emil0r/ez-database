@@ -1,4 +1,4 @@
-(defproject ez-database "0.3.1-beta1"
+(defproject ez-database "0.4.0-SNAPSHOT"
   :description "Handling database queries with ease"
   :url "https://github.com/emil0r/ez-database"
   :license {:name "Eclipse Public License"

@@ -17,10 +17,17 @@
 
 (def ^:dynamic *connection* nil)
 
-(defn- get-connection [db-specs key]
+(defn get-connection [db-specs key]
   (if-not (nil? *connection*)
-    (assoc (get db-specs key) :connection *connection*)
+    *connection*
     (get db-specs key)))
+
+(defmacro with-transaction [binding & body]
+  `(jdbc/db-transaction* (get-connection (:db-specs (first ~binding)) (second ~binding))
+                         (^{:once true} fn* [~'con]
+                          (binding [*connection* ~'con]
+                            ~@body))
+                         ~@(rest (rest binding))))
 
 (defmacro try-query [& body]
   `(try+

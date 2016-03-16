@@ -1,5 +1,6 @@
 (ns ez-database.test.queries
-  (:require [ez-database.core :as db]
+  (:require [clojure.java.jdbc :as jdbc]
+            [ez-database.core :as db]
             [ez-database.test.core :refer [reset-db! db-spec db-spec-2]]
             [midje.sweet :refer :all]
             [slingshot.slingshot :refer [try+]]
@@ -155,4 +156,17 @@
                     (db/query db :extra)
                     (map :id)) => [0 42]))
    (fact "database"
-         (db/databases db) => [:default :extra])))
+         (db/databases db) => [:default :extra])
+
+   (fact "transaction"
+         (try
+           (db/with-transaction [db :default]
+             (db/query! db {:insert-into :test :values [{:id 43}]})
+             (db/query! db {:insert-into :test :values [{:id 44}]})
+             (db/query! db {:insert-into :test :values [{:id "asdf"}]}))
+           (catch Exception e
+             (println e)
+             (->> (db/query db {:select [:*]
+                                :from [:test]})
+                  (map :id))))
+         => [0 42])))
