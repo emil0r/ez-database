@@ -160,12 +160,11 @@
 
    (fact "transaction"
          (try
-           (db/with-transaction [db :default]
+           (db/with-transaction [db]
              (db/query! db {:insert-into :test :values [{:id 43}]})
              (db/query! db {:insert-into :test :values [{:id 44}]})
              (db/query! db {:insert-into :test :values [{:id "asdf"}]}))
            (catch Exception e
-             (println e)
              (->> (db/query db {:select [:*]
                                 :from [:test]})
                   (map :id))))

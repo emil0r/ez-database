@@ -184,9 +184,14 @@ Assuming databases :default and :foobar we can do selects against both of them.
 (db/query db :foobar "select * from foo where id > ?" [0]) ;; => [{:id 42 :what_p "How many bars does it take for foo to be happy?"}]
 ```
 
-## missing
+## transactions
 
-No good support for rollbacks yet.
+```clojure
+;; will fail because :id only takes integers
+(db/with-transaction [db :default]
+  (db/query! db {:insert-into :test :values [{:id 1}]})
+  (db/query! db {:insert-into :test :values [{:id "asdf"}]}))
+```
 
 ## License
 
