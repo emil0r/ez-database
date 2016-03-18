@@ -25,7 +25,7 @@ Handling database queries with different libraries. Support for yesql, honeysql,
 
 Download from clojars
 ```clojure
-[ez-database "0.3.0"]
+[ez-database "0.4.0"]
 ```
 
 Assuming a database with the following schema.
@@ -195,7 +195,7 @@ Assuming databases :default and :foobar we can do selects against both of them.
 
 ## License
 
-Copyright © 2015 Emil Bengtsson
+Copyright © 2015-2016 Emil Bengtsson
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
