@@ -193,6 +193,41 @@ Assuming databases :default and :foobar we can do selects against both of them.
   (db/query! db {:insert-into :test :values [{:id "asdf"}]}))
 ```
 
+## query zipper (0.5.0-SNAPSHOT)
+
+Stricly for [Honey SQL](https://github.com/jkk/honeysql) maps, the query zipper can provide optional arguments that can be cleaned up by the zipper,
+happily avoid nil values which will be interpreted by HoneySQL as NULL. Use together with honeysql.helpers functions.
+
+```clojure
+(require '[ez-database.query :as query])
+(requery '[honeysql.helpers :as sql.helpers]) 
+
+(def pred? true)
+
+(-> {:select [:*]
+     :from [:test]
+     :where [:> :id 0]}
+     (query/optional pred? (sql.helpers/where [:or [:= :id 0]
+                                                   (query/optional true [:is :id nil])]))
+     (query/clean))
+     
+;; will produce
+
+{:select [:*]
+ :from [:test]
+ :where [:or [:= :id 0]
+             [:is :id nil]]}
+```
+
+*query/optional* takes either *[pred? helper]* or *[q pred? helper]* as arguments
+
+  - q is the already existing query
+  - pred? is the predicate function
+  - helper is the helper function from honeysql.helpers
+
+*query/clean* will clean up the query map from any nil values produced by the optional macro
+
+
 ## License
 
 Copyright © 2015-2016 Emil Bengtsson
