@@ -9,7 +9,7 @@
 (defqueries "queries/test.sql")
 
 
-(fact
+(fact "queries"
  (let [db (db/map->EzDatabase {:db-specs {:default db-spec
                                           :extra db-spec-2}})
        reset-db? true]
@@ -169,3 +169,17 @@
                                 :from [:test]})
                   (map :id))))
          => [0 42])))
+
+(fact "error reporting"
+      (let [db (db/map->EzDatabase {:db-specs {:default db-spec
+                                               :extra db-spec-2}})
+            reset-db? true]
+        (fact "batch inserts"
+              (when reset-db?
+                (reset-db!))
+              (try+
+               (db/query! db {:insert-into :test :values [{:id 3}
+                                                          {:id 4}
+                                                          {:id 5 :foboar "Asdf"}]})
+               (catch [:type :ez-database.core/try-query] {:keys [messages]}
+                 (count messages))) => 2)))

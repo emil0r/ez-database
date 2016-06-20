@@ -29,12 +29,30 @@
                             ~@body))
                          ~@(rest (rest binding))))
 
+(defn- get-causes-messages [e]
+  (loop [msg []
+         e e
+         breakpoint 0]
+    (if (or (nil? e)
+            (> breakpoint 100))
+      msg
+      (recur (try
+               (conj msg (.getMessage e))
+               (catch Exception _
+                 msg))
+             (try
+               (.getNextException e)
+               (catch Exception _
+                 nil))
+             (inc breakpoint)))))
+
 (defmacro try-query [& body]
   `(try+
     ~@body
     (catch Object ~'e
       (throw+ {:type ::try-query
                :exception ~'e
+               :messages (get-causes-messages ~'e)
                :query ~'query}))))
 
 (defmacro try-query-args [& body]
@@ -43,6 +61,7 @@
     (catch Object ~'e
       (throw+ {:type ::try-query-args
                :exception ~'e
+               :messages (get-causes-messages ~'e)
                :query ~'query
                :args ~'args}))))
 
