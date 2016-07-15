@@ -193,7 +193,7 @@ Assuming databases :default and :foobar we can do selects against both of them.
   (db/query! db {:insert-into :test :values [{:id "asdf"}]}))
 ```
 
-## query zipper (0.5.0-SNAPSHOT)
+## query zipper
 
 Stricly for [Honey SQL](https://github.com/jkk/honeysql) maps, the query zipper can provide optional arguments that can be cleaned up by the zipper,
 happily avoid nil values which will be interpreted by HoneySQL as NULL. Use together with honeysql.helpers functions.
@@ -207,8 +207,8 @@ happily avoid nil values which will be interpreted by HoneySQL as NULL. Use toge
 (-> {:select [:*]
      :from [:test]
      :where [:> :id 0]}
-     (query/optional pred? (sql.helpers/where [:or [:= :id 0]
-                                                   (query/optional true [:is :id nil])]))
+     (query/swap pred? (sql.helpers/where [:or [:= :id 0]
+                                               (query/optional true [:is :id nil])]))
      (query/clean))
      
 ;; will produce
@@ -219,11 +219,17 @@ happily avoid nil values which will be interpreted by HoneySQL as NULL. Use toge
              [:is :id nil]]}
 ```
 
-*query/optional* takes either *[pred? helper]* or *[q pred? helper]* as arguments
+*query/optional* takes *[pred? & r]* as arguments
 
+  - pred? is the predicate function
+  - r is what will be filled in
+  
+  *query/swap* takes *[q pred? helper]* as arguments
+  
   - q is the already existing query
   - pred? is the predicate function
   - helper is the helper function from honeysql.helpers
+
 
 *query/clean* will clean up the query map from any nil values produced by the optional macro
 

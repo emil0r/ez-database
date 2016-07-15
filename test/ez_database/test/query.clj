@@ -2,7 +2,7 @@
   (:require [clojure.zip :as zip]
             [honeysql.core :as sql]
             [honeysql.helpers :as sql.helpers]
-            [ez-database.query :refer [optional clean]]
+            [ez-database.query :refer [optional clean swap]]
             [ez-database.query.zipper :as query.zipper]
             [midje.sweet :refer :all]))
 
@@ -13,9 +13,24 @@
  (clean
   (-> {:select [:*]
        :from [:test]}
-      (optional true (sql.helpers/where [:and
-                                         [:= :foo true]
-                                         (optional false [:= :foo false])]))))
+      (swap true (sql.helpers/where [:and
+                                     [:= :foo true]
+                                     (optional false [:= :foo false])]))))
  => {:select [:*]
      :from [:test]
      :where [:and [:= :foo true]]})
+
+(fact
+ "optional macro"
+ (clean
+  {:with [[:images {:select [:*]
+                    :from [:images]}]]
+   :select [:*]
+   :from [:test]
+   :join [(optional (not (nil? 1))
+                    [:images :i] [:= :test.id :i.id])]})
+ => {:with [[:images {:select [:*]
+                      :from [:images]}]]
+     :select [:*]
+     :from [:test]
+     :join [[:images :i] [:= :test.id :i.id]]})
