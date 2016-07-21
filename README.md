@@ -25,7 +25,7 @@ Handling database queries with different libraries. Support for yesql, honeysql,
 
 Download from clojars
 ```clojure
-[ez-database "0.4.0"]
+[ez-database "0.5.3"]
 ```
 
 Assuming a database with the following schema.
