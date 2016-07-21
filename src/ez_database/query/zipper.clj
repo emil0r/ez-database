@@ -29,3 +29,6 @@
 
 (defn zipper [node]
   (zip/zipper branch? seq-children make-node node))
+
+(prefer-method branch? clojure.lang.IPersistentList clojure.lang.ISeq)
+(prefer-method seq-children clojure.lang.IPersistentList clojure.lang.ISeq)
