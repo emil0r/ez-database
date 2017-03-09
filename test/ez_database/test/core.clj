@@ -7,7 +7,7 @@
 
 (defn run [target & args]
   (let [db-spec (-> target :db :db-spec)]
-    (jdbc/insert! db-spec "test" [:id] [0] [42])))
+    (jdbc/insert-multi! db-spec "test" [:id] [[0] [42]])))
 
 (def db-spec {:classname "org.postgresql.Driver"
               :subprotocol "postgresql"
