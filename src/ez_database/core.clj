@@ -1,7 +1,6 @@
 (ns ez-database.core
   (:require [clojure.java.jdbc :as jdbc]
-            [honeysql.core :as honeysql]
-            [slingshot.slingshot :refer [try+ throw+]]))
+            [honeysql.core :as honeysql]))
 
 
 (defprotocol IEzDatabase
@@ -47,27 +46,30 @@
              (inc breakpoint)))))
 
 (defmacro try-query [& body]
-  `(try+
+  `(try
     ~@body
-    (catch Object ~'e
-      (throw+ {:type ::try-query
-               :exception ~'e
-               :messages (get-causes-messages ~'e)
-               :query ~'query}))))
+    (catch Exception ~'e
+      (throw (ex-info "ez-database try-query failed"
+                      {:type ::try-query
+                       :exception ~'e
+                       :messages (get-causes-messages ~'e)
+                       :query ~'query})))))
 
 (defmacro try-query-args [& body]
-  `(try+
+  `(try
     ~@body
-    (catch Object ~'e
-      (throw+ {:type ::try-query-args
-               :exception ~'e
-               :messages (get-causes-messages ~'e)
-               :query ~'query
-               :args ~'args}))))
+    (catch Exception ~'e
+      (throw (ex-info "ez-database try-query-args failed"
+                      {:type ::try-query-args
+                       :exception ~'e
+                       :messages (get-causes-messages ~'e)
+                       :query ~'query
+                       :args ~'args})))))
 
-(defn throw-msg [msg]
-  (throw+ {:type ::error-msg
-           :msg msg}))
+(defn throw-msg [msg & args]
+  (throw (ex-info msg
+                  {:type ::error-msg
+                   :args args})))
 
 (extend-protocol IEzQuery
 
