@@ -15,9 +15,9 @@
        reset-db? true]
 
    (fact "nil"
-         (try+ (db/query db nil)
-               (catch [:type :ez-database.core/try-query] {{msg :msg} :exception}
-                 msg))
+         (try (db/query db nil)
+              (catch Exception e
+                (.getMessage (:exception (ex-data e)))))
 
          => "nil can't be run as a query")
 
