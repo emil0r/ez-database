@@ -10,16 +10,16 @@ Handling database queries with different libraries. Support for yesql, honeysql,
 
 ```clojure
 (defprotocol IEzDatabase
-  (query [database query] [database key? query] [database key query args])
-  (query! [database query] [database key? query] [database key query args])
-  (query<! [database query] [database key? query] [database key query args])
+  (query [database query] [database opts-key? query] [database opts? key? query] [database opts key query args])
+  (query! [database query] [database opts-key? query] [database opts? key? query] [database opts key query args])
+  (query<! [database query] [database opts-key? query] [database opts? key? query] [database opts key query args])
   (databases [database]))
 ```
 
 - database which is a record is always the first field.
 - query always returns a result set.
-- query! executes a command and does not return a result set.
-- query<! executes a command and gives back a value. Used for insert
+- query! executes a command and returns number of rows affected
+- query<! executes a command and gives back the values of what's been inserted. Used for insert
 
 ## Usage
 
@@ -233,10 +233,60 @@ happily avoid nil values which will be interpreted by HoneySQL as NULL. Use toge
 
 *query/clean* will clean up the query map from any nil values produced by the optional macro
 
+## transformations
+
+Transformations of values are supported by an opts map.
+
+```clojure
+;; we have
+;; 1) a database table named users that has the columns :id, :first_name and :last_name
+;; 2) a spec :user/user under the ns user that specifies :user/id, :user/first-name and :user/last-name
+
+;; -- inside user.clj --
+
+'(require [clojure.alpha.spec :as s])
+
+(s/def ::id integer?)
+(s/def ::first-name string?)
+(s/def ::last-name string?)
+(s/def ::user (s/keys-of :req [::id
+                               ::first-name
+                               ::last-name]))
+
+;; -- inside an init file of some sort --
+'(require [ez-database.core :as db]
+          [ez-database.transform :as transform]
+          [example.user :as user])
+
+;; the two transformation keys are completely arbitrary and can be named anything
+(transform/add :user ::user/user
+               [:id         ::user/id]
+               [:first_name ::user/first-name]
+               [:last_name  ::user/last-name])
+               
+(let [db (get-db)]
+  (db/query db
+            ;; transformations can use [:transformation :pre]
+            ;; and [:transformation :post] in the opts map
+            ;; pre is applied to any args sent in to the db
+            ;; and post is applied to any values retrieved from the
+            ;; database
+            ^:opts {[:transformation :post] 
+                    [:user ::user/user] 
+                    ;; an optional opts map can
+                    ;; be sent in to the transformation
+                    { ;; allow nil values? defaults to true
+                     :nil? false
+                                      
+                      ;; optional validation against a spec
+                     :validation ::user/user}]}
+            {:select [:id :first_name :last_name]
+             :from [:users]}))
+```
 
 ## License
 
-Copyright © 2015-2016 Emil Bengtsson
+Copyright © 2015-2017 Emil Bengtsson
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.

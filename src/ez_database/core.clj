@@ -57,7 +57,7 @@
 ;; multimethod for handling of returned values, post query
 (def post-query nil)
 (defmulti post-query (fn [k v db values] k))
-(defmethod post-query :transformation [_ [from to opts] _ values]
+(defmethod post-query [:transformation :post] [_ [from to opts] _ values]
   (cond (map? values)
         (transform/transform opts from to values)
 
@@ -77,7 +77,7 @@
 
 ;; multimethod for args, pre query
 (defmulti pre-query (fn [k v db values] k))
-(defmethod pre-query :transformation [_ [from to opts] _ values]
+(defmethod pre-query [:transformation :pre] [_ [from to opts] _ values]
   (cond (map? values)
         (transform/transform opts from to values)
 
@@ -283,7 +283,7 @@
        (run-post-query db opts
                        (if (nil? args)
                          (run-query query (get-connection db-specs key))
-                         (run-query query (get-connection db-specs key) args))))))
+                         (run-query query (get-connection db-specs key) (run-pre-query db opts args)))))))
 
   (query [db opts? key? query]
     (let [[query opts key args] (get-args db-specs key? opts? key? query)]
@@ -291,12 +291,12 @@
        (run-post-query db opts
                        (if (nil? args)
                          (run-query query (get-connection db-specs key))
-                         (run-query query (get-connection db-specs key) args))))))
+                         (run-query query (get-connection db-specs key) (run-pre-query db opts args)))))))
 
   (query [db opts key query args]
     (try-query-args
      (run-post-query db opts
-                     (run-query query (get-connection db-specs key) args))))
+                     (run-query query (get-connection db-specs key) (run-pre-query db opts args)))))
 
   (query! [db query]
     (try-query
@@ -326,18 +326,24 @@
   (query<! [db opts-key? query]
     (let [[query opts key args] (get-args db-specs opts-key? opts-key? opts-key? query)]
       (try-query-args
-       (if (nil? args)
-         (run-query<! query (get-connection db-specs key))
-         (run-query<! query (get-connection db-specs key) (run-pre-query db opts args))))))
+       (run-post-query
+        db opts
+        (if (nil? args)
+          (run-query<! query (get-connection db-specs key))
+          (run-query<! query (get-connection db-specs key) (run-pre-query db opts args)))))))
   (query<! [db opts? key? query]
     (let [[query opts key args] (get-args db-specs key? opts? key? query)]
       (try-query-args
-       (if (nil? args)
-         (run-query<! query (get-connection db-specs key))
-         (run-query<! query (get-connection db-specs key) (run-pre-query db opts args))))))
+       (run-post-query
+        db opts
+        (if (nil? args)
+          (run-query<! query (get-connection db-specs key))
+          (run-query<! query (get-connection db-specs key) (run-pre-query db opts args)))))))
   (query<! [db opts key query args]
     (try-query-args
-     (run-query<! query (get-connection db-specs key) (run-pre-query db opts args))))
+     (run-post-query
+      db opts
+      (run-query<! query (get-connection db-specs key) (run-pre-query db opts args)))))
 
   (databases [db]
     (keys db-specs)))
