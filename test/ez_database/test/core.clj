@@ -1,7 +1,7 @@
 (ns ez-database.test.core
   (:require [clojure.java.jdbc :as jdbc]
             [joplin.core :as joplin]
-            joplin.jdbc.database))
+            [joplin.jdbc.database]))
 
 
 

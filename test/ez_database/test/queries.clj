@@ -180,6 +180,6 @@
               (try+
                (db/query! db {:insert-into :test :values [{:id 3}
                                                           {:id 4}
-                                                          {:id 5 :foboar "Asdf"}]})
+                                                          {:id 5 :foobar "Asdf"}]})
                (catch [:type :ez-database.core/try-query] {:keys [messages]}
                  (count messages))) => 2)))

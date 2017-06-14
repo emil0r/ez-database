@@ -1,13 +1,99 @@
 (ns ez-database.core
   (:require [clojure.java.jdbc :as jdbc]
+            [ez-database.transform :as transform]
             [honeysql.core :as honeysql]))
 
 
 (defprotocol IEzDatabase
-  (query [database query] [database key? query] [database key query args])
-  (query! [database query] [database key? query] [database key query args])
-  (query<! [database query] [database key? query] [database key query args])
+  (query [database query] [database opts-key? query] [database opts? key? query] [database opts key query args])
+  (query! [database query] [database opts-key? query] [database opts? key? query] [database opts key query args])
+  (query<! [database query] [database opts-key? query] [database opts? key? query] [database opts key query args])
   (databases [database]))
+
+(defn get-args [db-specs query? opts? key? args?]
+  (let [opts (cond (:opts (meta opts?)) opts?
+                   (:opts (meta key?)) key?
+                   (:opts (meta query?)) query?
+                   (:opts (meta args?)) args?
+                   :else nil)
+        key (cond (get db-specs opts?) opts?
+                  (get db-specs key?) key?
+                  :else nil)
+        query (cond
+                ;; both key and opts were filled. four or five arity was used
+                (and (not (nil? opts))
+                     (not (nil? key)))
+                query?
+
+                ;; neither key and opts were filled. two, four or five arity was used
+                (and (nil? opts)
+                     (nil? key))
+                query?
+
+                ;; key was filled, not opts. three or four arity was used
+                (and (nil? opts)
+                     (not (nil? key)))
+                (->> [key? opts? query? args?]
+                     (remove #(or (nil? %) (= % key)))
+                     first)
+
+                ;; key was filled, not opts. three or four arity was used
+                (and (not (nil? opts))
+                     (nil? key))
+                (->> [key? opts? query? args?]
+                     (remove #(or (nil? %) (= % opts)))
+                     first)
+
+                :else
+                (->> [key? opts? query? args?]
+                     (remove #(or (= % key) (= % opts) nil?))
+                     first))
+
+        args (->> [args? query? key? opts?]
+                  (remove (into #{} (remove nil? [key opts query])))
+                  first)]
+    [query opts (or key :default) args]))
+
+;; multimethod for handling of returned values, post query
+(def post-query nil)
+(defmulti post-query (fn [k v db values] k))
+(defmethod post-query :transformation [_ [from to opts] _ values]
+  (cond (map? values)
+        (transform/transform opts from to values)
+
+        (sequential? values)
+        (map #(transform/transform opts from to %) values)
+
+        :else
+        values))
+(defmethod post-query :default [_ _ _ values]
+  values)
+(defn- run-post-query [db opts values]
+  (if opts
+    (reduce (fn [out [k v]]
+              (post-query k v db out))
+            values opts)
+    values))
+
+;; multimethod for args, pre query
+(defmulti pre-query (fn [k v db values] k))
+(defmethod pre-query :transformation [_ [from to opts] _ values]
+  (cond (map? values)
+        (transform/transform opts from to values)
+
+        (sequential? values)
+        (map #(transform/transform opts from to %) values)
+
+        :else
+        values))
+(defmethod pre-query :default [_ _ _ values]
+  values)
+(defn- run-pre-query [db opts values]
+  (if opts
+    (reduce (fn [out [k v]]
+              (pre-query k v db out))
+            values opts)
+    values))
 
 (defprotocol IEzQuery
   (run-query [query database] [query database args])
@@ -47,24 +133,24 @@
 
 (defmacro try-query [& body]
   `(try
-    ~@body
-    (catch Exception ~'e
-      (throw (ex-info "ez-database try-query failed"
-                      {:type ::try-query
-                       :exception ~'e
-                       :messages (get-causes-messages ~'e)
-                       :query ~'query})))))
+     ~@body
+     (catch Exception ~'e
+       (throw (ex-info "ez-database try-query failed"
+                       {:type ::try-query
+                        :exception ~'e
+                        :messages (get-causes-messages ~'e)
+                        :query ~'query})))))
 
 (defmacro try-query-args [& body]
   `(try
-    ~@body
-    (catch Exception ~'e
-      (throw (ex-info "ez-database try-query-args failed"
-                      {:type ::try-query-args
-                       :exception ~'e
-                       :messages (get-causes-messages ~'e)
-                       :query ~'query
-                       :args ~'args})))))
+     ~@body
+     (catch Exception ~'e
+       (throw (ex-info "ez-database try-query-args failed"
+                       {:type ::try-query-args
+                        :exception ~'e
+                        :messages (get-causes-messages ~'e)
+                        :query ~'query
+                        :args ~'args})))))
 
 (defn throw-msg [msg & args]
   (throw (ex-info msg
@@ -76,112 +162,112 @@
   nil
   (run-query
     ([query db]
-       (throw-msg "nil can't be run as a query"))
+     (throw-msg "nil can't be run as a query"))
     ([query db args]
-       (throw-msg "nil can't be run as a query")))
+     (throw-msg "nil can't be run as a query")))
   (run-query!
     ([query db]
-       (throw-msg "nil can't be run as a query!"))
+     (throw-msg "nil can't be run as a query!"))
     ([query db args]
-       (throw-msg "nil can't be run as a query!")))
+     (throw-msg "nil can't be run as a query!")))
   (run-query<!
     ([query db]
-       (throw-msg "nil can't be run as a query<!"))
+     (throw-msg "nil can't be run as a query<!"))
     ([query db args]
-       (throw-msg "nil can't be run as a query<!")))
+     (throw-msg "nil can't be run as a query<!")))
 
   java.lang.String
   (run-query
     ([query db]
-       (jdbc/query db [query]))
+     (jdbc/query db [query]))
     ([query db args]
-       (jdbc/query db (concat [query] args))))
+     (jdbc/query db (concat [query] args))))
   (run-query!
     ([query db]
-       (jdbc/execute! db [query]))
+     (jdbc/execute! db [query]))
     ([query db args]
-       (jdbc/execute! db (concat [query] args))))
+     (jdbc/execute! db (concat [query] args))))
   (run-query<!
     ([query db]
-       (throw-msg "String without args is not allowed for query<!"))
+     (throw-msg "String without args is not allowed for query<!"))
     ([query db args]
-       (apply jdbc/insert! db query args)))
+     (apply jdbc/insert! db query args)))
 
   clojure.lang.Sequential
   (run-query
     ([query db]
-       (jdbc/query db query))
+     (jdbc/query db query))
     ([query db args]
-       (jdbc/query db (concat query args))))
+     (jdbc/query db (concat query args))))
   (run-query!
     ([query db]
-       (jdbc/execute! db query))
+     (jdbc/execute! db query))
     ([query db args]
-       (jdbc/execute! db (concat query args))))
+     (jdbc/execute! db (concat query args))))
   (run-query<!
     ([query db]
-       (throw-msg "Sequence is not allowed for query<!"))
+     (throw-msg "Sequence is not allowed for query<!"))
     ([query db args]
-       (throw-msg "Sequence is not allowed for query<!")))
+     (throw-msg "Sequence is not allowed for query<!")))
 
   clojure.lang.PersistentArrayMap
   (run-query
     ([query db]
-       (jdbc/query db (honeysql/format query)))
+     (jdbc/query db (honeysql/format query)))
     ([query db args]
-       (jdbc/query db (honeysql/format query args))))
+     (jdbc/query db (honeysql/format query args))))
   (run-query!
     ([query db]
-       (jdbc/execute! db (honeysql/format query)))
+     (jdbc/execute! db (honeysql/format query)))
     ([query db args]
-       (jdbc/execute! db (honeysql/format query args))))
+     (jdbc/execute! db (honeysql/format query args))))
   (run-query<!
     ([query db]
-       (let [table (:insert-into query)
-             values (:values query)]
-         (apply jdbc/insert! db table values)))
+     (let [table (:insert-into query)
+           values (:values query)]
+       (apply jdbc/insert! db table values)))
     ([query db args]
-       (let [table (:insert-into query)
-             values (:values query)]
-         (apply jdbc/insert! db table values))))
+     (let [table (:insert-into query)
+           values (:values query)]
+       (apply jdbc/insert! db table values))))
 
   clojure.lang.PersistentHashMap
   (run-query
     ([query db]
-       (jdbc/query db (honeysql/format query)))
+     (jdbc/query db (honeysql/format query)))
     ([query db args]
-       (jdbc/query db (honeysql/format query args))))
+     (jdbc/query db (honeysql/format query args))))
   (run-query!
     ([query db]
-       (jdbc/execute! db (honeysql/format query)))
+     (jdbc/execute! db (honeysql/format query)))
     ([query db args]
-       (jdbc/execute! db (honeysql/format query args))))
+     (jdbc/execute! db (honeysql/format query args))))
   (run-query<!
     ([query db]
-       (let [table (:insert-into query)
-             values (:values query)]
-         (apply jdbc/insert! db table values)))
+     (let [table (:insert-into query)
+           values (:values query)]
+       (apply jdbc/insert! db table values)))
     ([query db args]
-       (let [table (:insert-into query)
-             values (:values query)]
-         (apply jdbc/insert! db table values))))
+     (let [table (:insert-into query)
+           values (:values query)]
+       (apply jdbc/insert! db table values))))
 
   clojure.lang.Fn
   (run-query
     ([query db]
-       (query {} {:connection db}))
+     (query {} {:connection db}))
     ([query db args]
-       (query args {:connection db})))
+     (query args {:connection db})))
   (run-query!
     ([query db]
-       (query {} {:connection db}))
+     (query {} {:connection db}))
     ([query db args]
-       (query args {:connection db})))
+     (query args {:connection db})))
   (run-query<!
     ([query db]
-       (query {} {:connection db}))
+     (query {} {:connection db}))
     ([query db args]
-       (query args {:connection db}))))
+     (query args {:connection db}))))
 
 
 (defrecord EzDatabase [db-specs ds-specs]
@@ -191,50 +277,67 @@
     (try-query
      (run-query query (get-connection db-specs :default))))
 
-  (query [db key? query]
-    (let [[key query args] (if (get db-specs key?)
-                             [key? query nil]
-                             [:default key? query])]
+  (query [db opts-key? query]
+    (let [[query opts key args] (get-args db-specs opts-key? opts-key? opts-key? query)]
       (try-query-args
-       (if (nil? args)
-         (run-query query (get-connection db-specs key))
-         (run-query query (get-connection db-specs key) args)))))
+       (run-post-query db opts
+                       (if (nil? args)
+                         (run-query query (get-connection db-specs key))
+                         (run-query query (get-connection db-specs key) args))))))
 
-  (query [db key query args]
+  (query [db opts? key? query]
+    (let [[query opts key args] (get-args db-specs key? opts? key? query)]
+      (try-query-args
+       (run-post-query db opts
+                       (if (nil? args)
+                         (run-query query (get-connection db-specs key))
+                         (run-query query (get-connection db-specs key) args))))))
+
+  (query [db opts key query args]
     (try-query-args
-     (run-query query (get-connection db-specs key) args)))
+     (run-post-query db opts
+                     (run-query query (get-connection db-specs key) args))))
 
   (query! [db query]
     (try-query
      (run-query! query (get-connection db-specs :default))))
 
-  (query! [db key? query]
-    (let [[key query args] (if (get db-specs key?)
-                             [key? query nil]
-                             [:default key? query])]
+  (query! [db opts-key? query]
+    (let [[query opts key args] (get-args db-specs opts-key? opts-key? opts-key? query)]
       (try-query
        (if (nil? args)
          (run-query! query (get-connection db-specs key))
-         (run-query! query (get-connection db-specs key) args)))))
+         (run-query! query (get-connection db-specs key) (run-pre-query db opts args))))))
 
-  (query! [db key query args]
+  (query! [db opts? key? query]
+    (let [[query opts key args] (get-args db-specs key? opts? key? query)]
+      (try-query
+       (if (nil? args)
+         (run-query! query (get-connection db-specs key))
+         (run-query! query (get-connection db-specs key) (run-pre-query db opts args))))))
+
+  (query! [db opts key query args]
     (try-query-args
-     (run-query! query (get-connection db-specs key) args)))
+     (run-query! query (get-connection db-specs key) (run-pre-query db opts args))))
 
   (query<! [db query]
     (try-query
      (run-query<! query (get-connection db-specs :default))))
-  (query<! [db key? query]
-    (let [[key query args] (if (get db-specs key?)
-                             [key? query nil]
-                             [:default key? query])]
+  (query<! [db opts-key? query]
+    (let [[query opts key args] (get-args db-specs opts-key? opts-key? opts-key? query)]
       (try-query-args
        (if (nil? args)
          (run-query<! query (get-connection db-specs key))
-         (run-query<! query (get-connection db-specs key) args)))))
-  (query<! [db key query args]
+         (run-query<! query (get-connection db-specs key) (run-pre-query db opts args))))))
+  (query<! [db opts? key? query]
+    (let [[query opts key args] (get-args db-specs key? opts? key? query)]
+      (try-query-args
+       (if (nil? args)
+         (run-query<! query (get-connection db-specs key))
+         (run-query<! query (get-connection db-specs key) (run-pre-query db opts args))))))
+  (query<! [db opts key query args]
     (try-query-args
-     (run-query<! query (get-connection db-specs key) args)))
+     (run-query<! query (get-connection db-specs key) (run-pre-query db opts args))))
 
   (databases [db]
     (keys db-specs)))
