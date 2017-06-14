@@ -233,6 +233,10 @@ happily avoid nil values which will be interpreted by HoneySQL as NULL. Use toge
 
 *query/clean* will clean up the query map from any nil values produced by the optional macro
 
+## post and pre functions
+
+Core now has the multimethods of post-query and pre-query. These functions are run on any data that goes into the database and after it comes out. Initiated via the opts running one of the query commands. See implementation details in core.clj for further details.
+
 ## transformations
 
 Transformations of values are supported by an opts map.
