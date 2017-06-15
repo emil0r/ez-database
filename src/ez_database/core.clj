@@ -19,35 +19,9 @@
         key (cond (get db-specs opts?) opts?
                   (get db-specs key?) key?
                   :else nil)
-        query (cond
-                ;; both key and opts were filled. four or five arity was used
-                (and (not (nil? opts))
-                     (not (nil? key)))
-                query?
-
-                ;; neither key and opts were filled. two, four or five arity was used
-                (and (nil? opts)
-                     (nil? key))
-                query?
-
-                ;; key was filled, not opts. three or four arity was used
-                (and (nil? opts)
-                     (not (nil? key)))
-                (->> [key? opts? query? args?]
-                     (remove #(or (nil? %) (= % key)))
-                     first)
-
-                ;; key was filled, not opts. three or four arity was used
-                (and (not (nil? opts))
-                     (nil? key))
-                (->> [key? opts? query? args?]
-                     (remove #(or (nil? %) (= % opts)))
-                     first)
-
-                :else
-                (->> [key? opts? query? args?]
-                     (remove #(or (= % key) (= % opts) nil?))
-                     first))
+        query (->> [key? opts? query? args?]
+                   (remove #(or (nil? %) (= % key) (= % opts)))
+                   first)
 
         args (->> [args? query? key? opts?]
                   (remove (into #{} (remove nil? [key opts query])))
