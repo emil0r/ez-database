@@ -54,9 +54,19 @@
        (when-let [spec (:validate opts)]
          (when-not (s/valid? spec new-data)
            (throw (ex-info "Invalid spec" (s/explain-data spec new-data)))))
-       (if (true? (:nil? opts))
-         new-data
+       (cond
+         (false? (:nil opts))
          (->> new-data
               (clojure.core/remove (fn [[k v]]
                                      (nil? v)))
-              (into {})))))))
+              (into {}))
+
+         (set? (:nil opts))
+         (->> new-data
+              (clojure.core/remove (fn [[k v]]
+                                     (and (nil? v)
+                                          (not ((:nil opts) k)))))
+              (into {}))
+
+         :else
+         new-data)))))

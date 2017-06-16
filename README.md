@@ -280,7 +280,8 @@ Transformations of values are supported by an opts map.
                     ;; an optional opts map can
                     ;; be sent in to the transformation
                     { ;; allow nil values? defaults to true
-                     :nil? false
+                      ;; can be set to boolean or a set of keywords
+                     :nil #{:foo :bar :baz} ;; <-- will be allowed to be nil
                                       
                       ;; optional validation against a spec
                      :validation ::user/user}]}

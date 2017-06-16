@@ -10,6 +10,36 @@
 (defqueries "queries/test.sql")
 
 
+(fact "transformations"
+      (transform/add :a :b
+                     [:foo :foo/foo]
+                     [:bar :foo/bar]
+                     [:baz :foo/baz])
+      (fact ":nil #{:foo :bar}"
+            (transform/transform
+             {:nil #{:foo/foo :foo/bar}}
+             :a :b {:foo nil
+                    :bar nil
+                    :baz nil})
+            => {:foo/foo nil
+                :foo/bar nil})
+      (fact "empty"
+            (transform/transform
+             :a :b {:foo nil
+                    :bar nil
+                    :baz nil})
+            => {:foo/foo nil
+                :foo/bar nil
+                :foo/baz nil})
+      (fact "all"
+            (transform/transform
+             {:nil false}
+             :a :b {:foo nil
+                    :bar nil
+                    :baz nil})
+            => {}))
+
+
 (fact "queries"
       (let [db (db/map->EzDatabase {:db-specs {:default db-spec
                                                :extra db-spec-2}})
