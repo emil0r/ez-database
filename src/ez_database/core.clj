@@ -40,6 +40,8 @@
 
         :else
         values))
+(defmethod post-query [:remove :post] [_ ks _ values]
+  (map #(apply dissoc % ks) values))
 (defmethod post-query :default [_ _ _ values]
   values)
 (defn- run-post-query [db opts values]
@@ -60,6 +62,8 @@
 
         :else
         values))
+(defmethod pre-query [:remove :pre] [_ ks _ values]
+  (map #(apply dissoc % ks) values))
 (defmethod pre-query :default [_ _ _ values]
   values)
 (defn- run-pre-query [db opts values]

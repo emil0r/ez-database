@@ -21,6 +21,17 @@
 
          => "nil can't be run as a query")
 
+   (fact "post-query"
+         (when reset-db?
+           (reset-db!))
+         (fact "remove :id"
+               (->> "select id from test order by id;"
+                    (db/query db ^:opts {[:remove :post] #{:id}}
+                              )
+                    (map :id))
+               => [nil nil])
+         (fact))
+
    (fact "string"
          (when reset-db?
            (reset-db!))
