@@ -237,6 +237,17 @@ happily avoid nil values which will be interpreted by HoneySQL as NULL. Use toge
 
 Core now has the multimethods of post-query and pre-query. These functions are run on any data that goes into the database and after it comes out. Initiated via the opts running one of the query commands. See implementation details in core.clj for further details.
 
+Bundled options are. Notice that if you combine any of these with [:transformation :pre] or [:transformation :post] it can be an idea to use an array-map instead of a hash-map so that you can control the order in which things happen.
+
+- [:remove-ks :post] #{:ks :in :here}
+- [:remove-ks :pre] #{:ks :in :here}
+- [:remove :post] pred-fn
+- [:remove :pre] pred-fn
+- [:filter :post] pred-fn
+- [:filter :pre] pred-fn
+
+:remove and :filter applies a remove and filter over each returned value using the pred-fn as the pred to apply. Remember that you will receive a [k v] pair into the function.
+
 ## transformations
 
 Transformations of values are supported by an opts map.

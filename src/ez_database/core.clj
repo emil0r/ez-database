@@ -40,8 +40,12 @@
 
         :else
         values))
-(defmethod post-query [:remove :post] [_ ks _ values]
+(defmethod post-query [:remove-ks :post] [_ ks _ values]
   (map #(apply dissoc % ks) values))
+(defmethod post-query [:remove :post] [_ pred _ values]
+  (map #(into {} (remove pred %)) values))
+(defmethod post-query [:filter :post] [_ pred _ values]
+  (map #(into {} (filter pred %)) values))
 (defmethod post-query :default [_ _ _ values]
   values)
 (defn- run-post-query [db opts values]
@@ -62,8 +66,13 @@
 
         :else
         values))
-(defmethod pre-query [:remove :pre] [_ ks _ values]
+(defmethod pre-query [:remove-ks :pre] [_ ks _ values]
   (map #(apply dissoc % ks) values))
+(defmethod pre-query [:remove :pre] [_ pred _ values]
+  (map #(into {} (remove pred %)) values))
+(defmethod pre-query [:filter :pre] [_ pred _ values]
+  (map #(into {} (filter pred %)) values))
+
 (defmethod pre-query :default [_ _ _ values]
   values)
 (defn- run-pre-query [db opts values]

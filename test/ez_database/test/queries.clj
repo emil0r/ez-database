@@ -24,10 +24,14 @@
    (fact "post-query"
          (when reset-db?
            (reset-db!))
+         (fact "remove-ks :id"
+               (->> "select id from test order by id;"
+                    (db/query db ^:opts {[:remove-ks :post] #{:id}})
+                    (map :id))
+               => [nil nil])
          (fact "remove :id"
                (->> "select id from test order by id;"
-                    (db/query db ^:opts {[:remove :post] #{:id}}
-                              )
+                    (db/query db ^:opts {[:remove :post] (fn [[k v]] (integer? v))})
                     (map :id))
                => [nil nil])
          (fact))
