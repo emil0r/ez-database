@@ -256,7 +256,7 @@ Ez-database comes with the following pre-defined functions.
 - [:filter :post] pred-fn
 - [:filter :pre] pred-fn
 
-:remove and :filter applies a remove and filter over each returned value using the pred-fn as the pred to apply. Remember that you will receive a [k v] pair into the function.
+:remove and :filter applies a remove and filter over each returned value using the pred-fn as the pred to apply. Remember that you will receive a [k v] pair into the function if there are maps involved (say, returned values from the database).
 
 *Notice that if you combine any of these with [:transformation :pre] or [:transformation :post] it can be an idea to use an array-map instead of a hash-map so that you can control the order in which things happen.*
 
