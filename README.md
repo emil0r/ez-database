@@ -237,7 +237,17 @@ happily avoid nil values which will be interpreted by HoneySQL as NULL. Use toge
 
 Core now has the multimethods of post-query and pre-query. These functions are run on any data that goes into the database and after it comes out. Initiated via the opts running one of the query commands. See implementation details in core.clj for further details.
 
-Bundled options are. Notice that if you combine any of these with [:transformation :pre] or [:transformation :post] it can be an idea to use an array-map instead of a hash-map so that you can control the order in which things happen.
+post and pre functions are applied using an opts map.
+
+```clojure
+ (db/query db 
+           :^opts {[:remove-ks :post] #{:id}} 
+           :db-key 
+           {:select [:*]
+            :from [:test]})
+```
+
+Ez-database comes with the following pre-defined functions. 
 
 - [:remove-ks :post] #{:ks :in :here}
 - [:remove-ks :pre] #{:ks :in :here}
@@ -248,9 +258,11 @@ Bundled options are. Notice that if you combine any of these with [:transformati
 
 :remove and :filter applies a remove and filter over each returned value using the pred-fn as the pred to apply. Remember that you will receive a [k v] pair into the function.
 
+*Notice that if you combine any of these with [:transformation :pre] or [:transformation :post] it can be an idea to use an array-map instead of a hash-map so that you can control the order in which things happen.*
+
 ## transformations
 
-Transformations of values are supported by an opts map.
+One pre and post function is :transformation which can transform the values of incoming and outgoing values according to the specified transformation. Supports both change of keys and values.
 
 ```clojure
 ;; we have
