@@ -10,8 +10,25 @@
   (query<! [database query] [database opts-key? query] [database opts? key? query] [database opts key query args])
   (databases [database]))
 
+(def ^{:private true
+       :dynamic true} *register-opts* (atom {}))
+
+(defn register-opts! [k opts]
+  (swap! *register-opts* assoc k opts))
+(defn unregister-opts! [k]
+  (swap! *register-opts* dissoc k))
+(defn get-opts [opts]
+  (if (keyword? opts)
+    (get @*register-opts* opts)
+    opts))
+
 (defn get-args [db-specs query? opts? key? args?]
-  (let [opts (cond (:opts (meta opts?)) opts?
+  (let [reg-opts @*register-opts*
+        opts (cond (contains? reg-opts opts?) (get reg-opts opts?)
+                   (contains? reg-opts key?) (get reg-opts key?)
+                   (contains? reg-opts query?) (get reg-opts query?)
+                   (contains? reg-opts args?) (get reg-opts args?)
+                   (:opts (meta opts?)) opts?
                    (:opts (meta key?)) key?
                    (:opts (meta query?)) query?
                    (:opts (meta args?)) args?
@@ -20,11 +37,12 @@
                   (get db-specs key?) key?
                   :else nil)
         query (->> [key? opts? query? args?]
-                   (remove #(or (nil? %) (= % key) (= % opts)))
+                   (remove #(or (nil? %) (contains? reg-opts %) (= % key) (= % opts)))
                    first)
 
         args (->> [args? query? key? opts?]
                   (remove (into #{} (remove nil? [key opts query])))
+                  (remove #(contains? reg-opts %))
                   first)]
     [query opts (or key :default) args]))
 
@@ -322,9 +340,10 @@
                          (run-query query (get-connection db-specs key) (run-pre-query db opts args)))))))
 
   (query [db opts key query args]
-    (try-query-args
-     (run-post-query db opts
-                     (run-query query (get-connection db-specs key) (run-pre-query db opts args)))))
+    (let [opts (get-opts opts)]
+      (try-query-args
+       (run-post-query db opts
+                       (run-query query (get-connection db-specs key) (run-pre-query db opts args))))))
 
   (query! [db query]
     (try-query
@@ -346,7 +365,7 @@
 
   (query! [db opts key query args]
     (try-query-args
-     (run-query! query (get-connection db-specs key) (run-pre-query db opts args))))
+     (run-query! query (get-connection db-specs key) (run-pre-query db (get-opts opts) args))))
 
   (query<! [db query]
     (try-query
@@ -368,10 +387,11 @@
           (run-query<! query (get-connection db-specs key))
           (run-query<! query (get-connection db-specs key) (run-pre-query db opts args)))))))
   (query<! [db opts key query args]
-    (try-query-args
-     (run-post-query
-      db opts
-      (run-query<! query (get-connection db-specs key) (run-pre-query db opts args)))))
+    (let [opts (get-opts opts)]
+      (try-query-args
+       (run-post-query
+        db opts
+        (run-query<! query (get-connection db-specs key) (run-pre-query db opts args))))))
 
   (databases [db]
     (keys db-specs)))

@@ -16,7 +16,7 @@
   (assoc new-data (get m k) (get old-data k)))
 (defmethod ->transform :default [k m _ new-data]
   ;; Do nothing. We could use a throw here, or log the mistake,
-  ;; but ultimately it's probably better to let the deveoper
+  ;; but ultimately it's probably better to let the developer
   ;; decide for the themselves how they want to handle this
   new-data)
 
