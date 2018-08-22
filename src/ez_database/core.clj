@@ -25,41 +25,53 @@
     (get @*register-opts* opts)
     opts))
 
-(defn register-query! [k [opts key query args :as data]]
-  (assert (vector? data) "query must be a vector of [opts key query args]")
+(defn- query-kw? [x]
+  (and (keyword? x) (= (namespace x) "query")))
+
+(defn register-query! [k [opts key query :as data]]
+  (assert (query-kw? k) "k must be a namespaced keyword starting with query like this :query/test")
+  (assert (vector? data) "query must be a vector of [opts key query]")
   (assert (or (nil? opts) (keyword? opts) (and (map? opts) (:opts (meta opts)))) "opts must either be nil, a keyword or a map with :opts meta set to true")
   (assert (or (nil? key) (keyword? key)) "key must be either nil or a keyword")
-  (assert (or (fn? query) (map? query)) "query must be either a function or a map")
-  (assert (or (nil? args) (vector? args) (map? args)) "args must be either nil, a vector or a map")
-  (swap! *register-queries* k query))
+  (assert (or (fn? query) (map? query) (string? query)) "query must be either a function, a map or a string")
+  (swap! *register-queries* assoc k data))
 (defn unregister-query! [k]
   (swap! *register-queries* dissoc k))
+(defn clear-queries! []
+  (reset! *register-queries* {}))
 (defn get-query [k]
   (get @*register-queries* k))
 
 (defn get-args [db-specs query? opts? key? args?]
-  (let [reg-opts @*register-opts*
-        opts (cond (contains? reg-opts opts?) (get reg-opts opts?)
-                   (contains? reg-opts key?) (get reg-opts key?)
-                   (contains? reg-opts query?) (get reg-opts query?)
-                   (contains? reg-opts args?) (get reg-opts args?)
-                   (:opts (meta opts?)) opts?
-                   (:opts (meta key?)) key?
-                   (:opts (meta query?)) query?
-                   (:opts (meta args?)) args?
-                   :else nil)
-        key (cond (get db-specs opts?) opts?
-                  (get db-specs key?) key?
-                  :else nil)
-        query (->> [key? opts? query? args?]
-                   (remove #(or (nil? %) (contains? reg-opts %) (= % key) (= % opts)))
-                   first)
+  (if (query-kw? query?)
+    (if-let [[opts key query :as data] (get @*register-queries* query?)]
+      [query opts (or key :default) (cond (some? args?) args?
+                                          (some? key?) key?
+                                          (some? opts?) opts?
+                                          :else nil)]
+      (throw (ex-info "Missing registered query" {:query query?})))
+    (let [reg-opts @*register-opts*
+          opts (cond (contains? reg-opts opts?) (get reg-opts opts?)
+                     (contains? reg-opts key?) (get reg-opts key?)
+                     (contains? reg-opts query?) (get reg-opts query?)
+                     (contains? reg-opts args?) (get reg-opts args?)
+                     (:opts (meta opts?)) opts?
+                     (:opts (meta key?)) key?
+                     (:opts (meta query?)) query?
+                     (:opts (meta args?)) args?
+                     :else nil)
+          key (cond (get db-specs opts?) opts?
+                    (get db-specs key?) key?
+                    :else nil)
+          query (->> [key? opts? query? args?]
+                     (remove #(or (nil? %) (contains? reg-opts %) (= % key) (= % opts)))
+                     first)
 
-        args (->> [args? query? key? opts?]
-                  (remove (into #{} (remove nil? [key opts query])))
-                  (remove #(contains? reg-opts %))
-                  first)]
-    [query opts (or key :default) args]))
+          args (->> [args? query? key? opts?]
+                    (remove (into #{} (remove nil? [key opts query])))
+                    (remove #(contains? reg-opts %))
+                    first)]
+      [query opts (or key :default) args])))
 
 ;; multimethod for handling of returned values, post query
 (def post-query nil)
@@ -341,7 +353,7 @@
        (run-query query (get-connection db-specs :default)))))
 
   (query [db opts-key? query]
-    (let [[query opts key args] (get-args db-specs opts-key? opts-key? opts-key? query)]
+    (let [[query opts key args :as asdf] (get-args db-specs opts-key? opts-key? opts-key? query)]
       (try-query-args
        (run-post-query db opts
                        (if (nil? args)

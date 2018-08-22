@@ -183,7 +183,28 @@
              (->> (db/query db {:select [:*]
                                 :from [:test]})
                   (map :id))))
-         => [0 42])))
+         => [0 42])
+
+   (fact "registering"
+         (when reset-db?
+           (reset-db!))
+         (db/clear-queries!)
+         (fact "honeysql"
+               (db/register-query! :query/testus1 [nil nil {:select [:*]
+                                                            :from [:test]
+                                                            :where [:> :id #sql/param :id]}])
+               
+               (->> {:id 1}
+                    (db/query db :query/testus1)
+                    (map :id))
+               => [42])
+         (fact "string"
+               (db/register-query! :query/testus2 [nil nil "select * from test where id > ?"])
+               (->> [1]
+                    (db/query db :query/testus2)
+                    (map :id))
+               => [42]
+               ))))
 
 (fact "error reporting"
       (let [db (db/map->EzDatabase {:db-specs {:default db-spec
