@@ -13,6 +13,9 @@
 (def ^{:private true
        :dynamic true} *register-opts* (atom {}))
 
+(def ^{:private true
+       :dynamic true} *register-queries* (atom {}))
+
 (defn register-opts! [k opts]
   (swap! *register-opts* assoc k opts))
 (defn unregister-opts! [k]
@@ -21,6 +24,18 @@
   (if (keyword? opts)
     (get @*register-opts* opts)
     opts))
+
+(defn register-query! [k [opts key query args :as data]]
+  (assert (vector? data) "query must be a vector of [opts key query args]")
+  (assert (or (nil? opts) (keyword? opts) (and (map? opts) (:opts (meta opts)))) "opts must either be nil, a keyword or a map with :opts meta set to true")
+  (assert (or (nil? key) (keyword? key)) "key must be either nil or a keyword")
+  (assert (or (fn? query) (map? query)) "query must be either a function or a map")
+  (assert (or (nil? args) (vector? args) (map? args)) "args must be either nil, a vector or a map")
+  (swap! *register-queries* k query))
+(defn unregister-query! [k]
+  (swap! *register-queries* dissoc k))
+(defn get-query [k]
+  (get @*register-queries* k))
 
 (defn get-args [db-specs query? opts? key? args?]
   (let [reg-opts @*register-opts*
@@ -321,7 +336,9 @@
 
   (query [db query]
     (try-query
-     (run-query query (get-connection db-specs :default))))
+     (if (keyword? query)
+       (apply query db (get-query query))
+       (run-query query (get-connection db-specs :default)))))
 
   (query [db opts-key? query]
     (let [[query opts key args] (get-args db-specs opts-key? opts-key? opts-key? query)]
@@ -347,7 +364,9 @@
 
   (query! [db query]
     (try-query
-     (run-query! query (get-connection db-specs :default))))
+     (if (keyword? query)
+       (apply query! db (get-query query))
+       (run-query! query (get-connection db-specs :default)))))
 
   (query! [db opts-key? query]
     (let [[query opts key args] (get-args db-specs opts-key? opts-key? opts-key? query)]
@@ -369,7 +388,9 @@
 
   (query<! [db query]
     (try-query
-     (run-query<! query (get-connection db-specs :default))))
+     (if (keyword? query)
+       (apply query<! db (get-query query))
+       (run-query<! query (get-connection db-specs :default)))))
   (query<! [db opts-key? query]
     (let [[query opts key args] (get-args db-specs opts-key? opts-key? opts-key? query)]
       (try-query-args
