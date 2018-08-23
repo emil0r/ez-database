@@ -3,7 +3,6 @@
             [ez-database.core :as db]
             [ez-database.test.core :refer [reset-db! db-spec db-spec-2]]
             [midje.sweet :refer :all]
-            [slingshot.slingshot :refer [try+]]
             [yesql.core :refer [defqueries]]))
 
 (defqueries "queries/test.sql")
@@ -219,9 +218,9 @@
         (fact "batch inserts"
               (when reset-db?
                 (reset-db!))
-              (try+
+              (try
                (db/query! db {:insert-into :test :values [{:id 3}
                                                           {:id 4}
-                                                          {:id 5 :foobar "Asdf"}]})
-               (catch [:type :ez-database.core/try-query] {:keys [messages]}
-                 (count messages))) => 2)))
+                                                          {:id "5" :foobar "Asdf"}]})
+               (catch Exception e
+                 (count (:messages (ex-data e))))) => 2)))
