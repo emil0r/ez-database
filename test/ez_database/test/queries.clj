@@ -185,6 +185,13 @@
                   (map :id))))
          => [0 42])
 
+   (fact "params with honeysql"
+         (when reset-db?
+           (reset-db!))
+
+         (db/query db {:select [:*] :from [:test] :where [:= :id #sql/param :id]} {:id 0})
+         => [{:id 0}])
+
    (fact "registering"
          (when reset-db?
            (reset-db!))
@@ -203,8 +210,7 @@
                (->> [1]
                     (db/query db :query/testus2)
                     (map :id))
-               => [42]
-               ))))
+               => [42]))))
 
 (fact "error reporting"
       (let [db (db/map->EzDatabase {:db-specs {:default db-spec

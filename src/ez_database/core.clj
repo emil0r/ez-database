@@ -1,5 +1,6 @@
 (ns ez-database.core
-  (:require [clojure.java.jdbc :as jdbc]
+  (:require [clojure.string :as str]
+            [clojure.java.jdbc :as jdbc]
             [ez-database.transform :as transform]
             [honeysql.core :as honeysql]))
 
@@ -26,7 +27,9 @@
     opts))
 
 (defn- query-kw? [x]
-  (and (keyword? x) (= (namespace x) "query")))
+  (if (keyword? x)
+    (if-let [x-ns (namespace x)]
+      (str/starts-with? x-ns "query"))))
 
 (defn register-query! [k [opts key query :as data]]
   (assert (query-kw? k) "k must be a namespaced keyword starting with query like this :query/test")
@@ -45,10 +48,17 @@
 (defn get-args [db-specs query? opts? key? args?]
   (if (query-kw? query?)
     (if-let [[opts key query :as data] (get @*register-queries* query?)]
-      [query opts (or key :default) (cond (some? args?) args?
-                                          (some? key?) key?
-                                          (some? opts?) opts?
-                                          :else nil)]
+      [;; query
+       query
+       ;; opts
+       (get @*register-opts* opts opts)
+       ;; key
+       (or key :default)
+       ;; args
+       (cond (some? args?) args?
+             (some? key?) key?
+             (some? opts?) opts?
+             :else nil)]
       (throw (ex-info "Missing registered query" {:query query?})))
     (let [reg-opts @*register-opts*
           opts (cond (contains? reg-opts opts?) (get reg-opts opts?)
