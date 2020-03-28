@@ -25,7 +25,7 @@ Handling database queries with different libraries. Support for yesql, honeysql,
 
 Download from clojars
 ```clojure
-[ez-database "0.6.0"]
+[ez-database "0.7.0"]
 ```
 
 Assuming a database with the following schema.
@@ -49,6 +49,46 @@ INSERT INTO test VALUES (0), (42);
 ;; add extra database specs under different keys
 ;; default is a required key
 (def db (db/map->EzDatabase {:db-specs {:default db-spec}}))
+
+;; or with hikari-cp and component
+
+(defn- get-datasource
+  "HikaruCP based connection pool"
+  [db-spec datasource]
+  {:datasource (hikari-cp/make-datasource datasource)})
+
+
+(extend-type EzDatabase
+  component/Lifecycle
+  (start [this]
+    (let [{:keys [db-specs ds-specs]} this]
+      (if (get-in db-specs [:default :datasource])
+        this
+        (do (log/info "Starting database")
+            (let [db-specs (->> (keys db-specs)
+                                (map
+                                 (fn [key]
+                                   (let [db-spec (get db-specs key)
+                                         ds-spec (get ds-specs key)]
+                                     [key (get-datasource db-spec ds-spec)])))
+                                (into {}))]
+              (assoc this
+                     :db-specs db-specs
+                     :ds-specs ds-specs))))))
+  (stop [this]
+    (let [db-specs (:db-specs this)]
+      (if-not (get-in db-specs [:default :datasource])
+        this
+        (do
+          (log/info "Stopping database")
+          (doseq [[key db-spec] db-specs]
+            (hikari-cp/close-datasource (:datasource db-spec))
+            (log/info "Closed datasource for" key))
+          (assoc this
+                 :db-specs (into
+                            {} (map (fn [[key db-spec]]
+                                      [key (dissoc db-spec :datasource)])
+                                    db-specs))))))))
 ```
 
 Given above code...
