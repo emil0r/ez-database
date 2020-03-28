@@ -312,9 +312,34 @@ One pre and post function is :transformation which can transform the values of i
              :from [:users]}))
 ```
 
+## registry
+
+You can register queries with `register-query!`.
+
+```clojure
+(myns
+  (:require [ez-database.core :as db]))
+ 
+
+;; the query must be a keyword, and must start with :query
+;; the reason it must start with :query is that a keyword is
+;; otherwise what is used for a database
+(db/reqister-query! :query.user/get-user-by-id
+  [nil ;; any opts go in here
+   nil ;; which database to query against. if nil :default is used
+   {:select [:*]
+    :from [:auth_user]
+    :where [:= :id #sql/param :id]}])
+    
+
+;; if you no longer want it, unregister it
+(db/unregister-query! :query.user/get-user-by-id)
+  
+```
+
 ## License
 
-Copyright © 2015-2017 Emil Bengtsson
+Copyright © 2015-2020 Emil Bengtsson
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
