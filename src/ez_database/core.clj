@@ -27,6 +27,9 @@
     opts))
 
 (defn- query-kw? [x]
+  ;; In order to qualify as a query that's been registered it needs to start with query.
+  ;; This is because keywords are also used for specifying which database the query should be
+  ;; run against
   (if (keyword? x)
     (if-let [x-ns (namespace x)]
       (str/starts-with? x-ns "query"))))
@@ -366,85 +369,85 @@
 (defrecord EzDatabase [db-specs ds-specs]
   IEzDatabase
 
-  (query [db query]
+  (query [db -query]
     (try-query
-     (if (keyword? query)
-       (apply query db (get-query query))
-       (run-query query (get-connection db-specs :default)))))
+     (if (keyword? -query)
+       (apply query db (get-query -query))
+       (run-query -query (get-connection db-specs :default)))))
 
-  (query [db opts-key? query]
-    (let [[query opts key args :as asdf] (get-args db opts-key? opts-key? opts-key? query)]
+  (query [db opts-key? -query]
+    (let [[-query opts key args :as asdf] (get-args db opts-key? opts-key? opts-key? -query)]
       (try-query-args
        (run-post-query db opts
                        (if (nil? args)
-                         (run-query query (get-connection db-specs key))
-                         (run-query query (get-connection db-specs key) args))))))
+                         (run-query -query (get-connection db-specs key))
+                         (run-query -query (get-connection db-specs key) args))))))
 
-  (query [db opts? key? query]
-    (let [[query opts key args] (get-args db key? opts? key? query)]
+  (query [db opts? key? -query]
+    (let [[-query opts key args] (get-args db key? opts? key? -query)]
       (try-query-args
        (run-post-query db opts
                        (if (nil? args)
-                         (run-query query (get-connection db-specs key))
-                         (run-query query (get-connection db-specs key) args))))))
+                         (run-query -query (get-connection db-specs key))
+                         (run-query -query (get-connection db-specs key) args))))))
 
-  (query [db opts key query args]
+  (query [db opts key -query args]
     (let [opts (get-opts opts)]
       (try-query-args
        (run-post-query db opts
-                       (run-query query (get-connection db-specs key) (run-process-args db opts args))))))
+                       (run-query -query (get-connection db-specs key) (run-process-args db opts args))))))
 
-  (query! [db query]
+  (query! [db -query]
     (try-query
-     (if (keyword? query)
-       (apply query! db (get-query query))
-       (run-query! query (get-connection db-specs :default)))))
+     (if (keyword? -query)
+       (apply query! db (get-query -query))
+       (run-query! -query (get-connection db-specs :default)))))
 
-  (query! [db opts-key? query]
-    (let [[query opts key args] (get-args db opts-key? opts-key? opts-key? query)]
+  (query! [db opts-key? -query]
+    (let [[-query opts key args] (get-args db opts-key? opts-key? opts-key? -query)]
       (try-query
        (if (nil? args)
-         (run-query! query (get-connection db-specs key))
-         (run-query! query (get-connection db-specs key) args)))))
+         (run-query! -query (get-connection db-specs key))
+         (run-query! -query (get-connection db-specs key) args)))))
 
-  (query! [db opts? key? query]
-    (let [[query opts key args] (get-args db key? opts? key? query)]
+  (query! [db opts? key? -query]
+    (let [[-query opts key args] (get-args db key? opts? key? -query)]
       (try-query
        (if (nil? args)
-         (run-query! query (get-connection db-specs key))
-         (run-query! query (get-connection db-specs key) args)))))
+         (run-query! -query (get-connection db-specs key))
+         (run-query! -query (get-connection db-specs key) args)))))
 
-  (query! [db opts key query args]
+  (query! [db opts key -query args]
     (try-query-args
-     (run-query! query (get-connection db-specs key) (run-process-args db (get-opts opts) args))))
+     (run-query! -query (get-connection db-specs key) (run-process-args db (get-opts opts) args))))
 
-  (query<! [db query]
+  (query<! [db -query]
     (try-query
-     (if (keyword? query)
-       (apply query<! db (get-query query))
-       (run-query<! query (get-connection db-specs :default)))))
-  (query<! [db opts-key? query]
-    (let [[query opts key args] (get-args db opts-key? opts-key? opts-key? query)]
+     (if (keyword? -query)
+       (apply query<! db (get-query -query))
+       (run-query<! -query (get-connection db-specs :default)))))
+  (query<! [db opts-key? -query]
+    (let [[-query opts key args] (get-args db opts-key? opts-key? opts-key? -query)]
       (try-query-args
        (run-post-query
         db opts
         (if (nil? args)
-          (run-query<! query (get-connection db-specs key))
-          (run-query<! query (get-connection db-specs key) args))))))
-  (query<! [db opts? key? query]
-    (let [[query opts key args] (get-args db key? opts? key? query)]
+          (run-query<! -query (get-connection db-specs key))
+          (run-query<! -query (get-connection db-specs key) args))))))
+  (query<! [db opts? key? -query]
+    (let [[-query opts key args] (get-args db key? opts? key? -query)]
       (try-query-args
        (run-post-query
         db opts
         (if (nil? args)
-          (run-query<! query (get-connection db-specs key))
-          (run-query<! query (get-connection db-specs key) args))))))
-  (query<! [db opts key query args]
+          (run-query<! -query (get-connection db-specs key))
+          (run-query<! -query (get-connection db-specs key) args))))))
+  (query<! [db opts key -query args]
     (let [opts (get-opts opts)]
       (try-query-args
        (run-post-query
         db opts
-        (run-query<! query (get-connection db-specs key) (run-process-args db opts args))))))
+        (run-query<! -query (get-connection db-specs key) (run-process-args db opts args))))))
 
   (databases [db]
     (keys db-specs)))
