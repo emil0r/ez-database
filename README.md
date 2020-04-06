@@ -5,7 +5,7 @@ Out of the box ez-database supports:
 - Multiple databases
 - Two ways of constructing queries
   - [HoneySQL](https://github.com/jkk/honeysql)
-  - [YesSQL](https://github.com/krisajenkins/yesql)
+  - [YeSQL](https://github.com/krisajenkins/yesql)
 - Advanced zipper functionality for easily building up a HoneySQL query
 - Optional registry for registering queries
 - Optional transformation for transforming entries/results into something more reasonable
