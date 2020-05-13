@@ -1,10 +1,18 @@
 # ez-database
 
-Handling database queries with different libraries. Support for yesql, honeysql, sequentials (string + params) and plain strings.
+Out of the box ez-database supports:
 
-## rationale
+- Multiple databases
+- Two ways of constructing queries
+  - [HoneySQL](https://github.com/jkk/honeysql)
+  - [YeSQL](https://github.com/krisajenkins/yesql)
+- Advanced zipper functionality for easily building up a HoneySQL query
+- Optional registry for registering queries
+- Optional transformation for transforming entries/results into something more reasonable
+- Optional pre/post functions for data coming in or out
+- Transaction support per database
+- Follows the loose standard of query, query! and query<! for results, execute and insert and give me back the result
 
-[yesql](https://github.com/krisajenkins/yesql) is nice when I know the query beforehand. [Honey SQL](https://github.com/jkk/honeysql) is nice when I don't. Just a plain string with some args is sometimes the best option. And sometimes I really want to just send in a vector that's been reduced.
 
 ## protocol
 
