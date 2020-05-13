@@ -24,7 +24,7 @@
               out))
           [:and] constraints))
 
-(defn- get-base-query [{::keys [operation table values select] :or {select [:*]}}]
+(defn- get-base-query [{:keys [operation table values select] :or {select [:*]}}]
   (case operation
     :delete {:delete-from table}
     :insert {:insert-into table :values values}
