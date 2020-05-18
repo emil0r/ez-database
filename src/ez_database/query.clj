@@ -8,8 +8,8 @@
   "Optional query arguments"
   ([pred? & r]
    `(if ~pred?
-      [:##holder## ~@r]
-      :##nil##)))
+      [::holder ~@r]
+      ::nil)))
 
 (defmacro swap
   "Query, predicate and the HoneySQL helper function"
@@ -19,17 +19,17 @@
       ~q)))
 
 (defn clean
-  "Clean a query map from optional :##nil## values"
+  "Clean a query map from optional ::nil values"
   [query]
   (loop [loc (zipper query)]
     (let [next-loc (zip/next loc)]
       (if (zip/end? next-loc)
         (zip/root loc)
         (cond
-          (= :##nil## (zip/node next-loc))
+          (= ::nil (zip/node next-loc))
           (recur (zip/remove next-loc))
 
-          (= :##holder## (zip/node next-loc))
+          (= ::holder (zip/node next-loc))
           (recur (-> (reduce (fn [out loc]
                                ;; insert to the left of out.
                                ;; this is because they are inserted in
@@ -41,7 +41,7 @@
                              ;; everything right of next-loc
                              (zip/rights next-loc))
                      ;; remove the node that holds
-                     ;; the :##holder## keyword
+                     ;; the ::holder keyword
                      zip/remove))
 
           :else

@@ -235,7 +235,7 @@
                        {:type ::try-query
                         :exception ~'e
                         :messages (get-causes-messages ~'e)
-                        :query ~'query})))))
+                        :query ~'-query})))))
 
 (defmacro try-query-args [& body]
   `(try
@@ -245,7 +245,7 @@
                        {:type ::try-query-args
                         :exception ~'e
                         :messages (get-causes-messages ~'e)
-                        :query ~'query
+                        :query ~'-query
                         :args ~'args})))))
 
 (defn throw-msg [msg & args]

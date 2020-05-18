@@ -33,7 +33,7 @@ Out of the box ez-database supports:
 
 Download from clojars
 ```clojure
-[ez-database "0.7.0"]
+[ez-database "0.8.0-rc1"]
 ```
 
 Assuming a database with the following schema.
@@ -194,7 +194,7 @@ Note that yesql functions returns the actual value, not a sequence of values.
 #### with honeysql hashmaps
 
 ```clojure
-(db/query<! db {:insert-into :test 
+(db/query<! db {:insert-into :test
                 :values [{:id -1}]}) ;; => [{:id -1}]
 ```
 
@@ -216,7 +216,7 @@ Assuming databases :default and :foobar we can do selects against both of them.
               :subname "//localhost:5432/test"
               :user "user"
               :password "password"})
-              
+
 (def db-spec-foo {:classname "org.postgresql.Driver"
                   :subprotocol "postgresql"
                   :subname "//localhost:5432/foobar"
@@ -248,7 +248,7 @@ happily avoid nil values which will be interpreted by HoneySQL as NULL. Use toge
 
 ```clojure
 (require '[ez-database.query :as query])
-(requery '[honeysql.helpers :as sql.helpers]) 
+(requery '[honeysql.helpers :as sql.helpers])
 
 (def pred? true)
 
@@ -258,7 +258,7 @@ happily avoid nil values which will be interpreted by HoneySQL as NULL. Use toge
      (query/swap pred? (sql.helpers/where [:or [:= :id 0]
                                                (query/optional true [:is :id nil])]))
      (query/clean))
-     
+
 ;; will produce
 
 {:select [:*]
@@ -271,15 +271,63 @@ happily avoid nil values which will be interpreted by HoneySQL as NULL. Use toge
 
   - pred? is the predicate function
   - r is what will be filled in
-  
+
   *query/swap* takes *[q pred? helper]* as arguments
-  
+
   - q is the already existing query
   - pred? is the predicate function
   - helper is the helper function from honeysql.helpers
 
 
 *query/clean* will clean up the query map from any nil values produced by the optional macro
+
+
+## simple model creation
+
+`ez-database.model` provides the tools to create a very simple model of a database table supporting very basic CRUD operations.
+
+``` clojure
+
+(require '[ez-database.model :as crud :refer [defmodel]])
+
+;; define our model
+;; :table
+;;   we need to set our table. this is the sql table we pick from
+;; :constraints
+;;   in constraints we set which constraints are to be supported
+;;   (they end up in the where clause of the SQL query)
+;;   Constraints follow the patterns [equality column-key model-key]
+;; :transformation
+;;   Transformations allows for transforming data from the way the database
+;;   handles the data to a data model that your application understands.
+;;   Transformations follow the pattern of [column model] and then vectors of [column-key model-key]
+;;   In addition to this transformations can also take a vector of four arguments, see transformations below
+;;   for more info.
+(defmodel MyModel {:model {:table :my_table
+                           :constraints #{[:= :id :model/id]
+                                          [:in :id :model/ids]
+                                          [:= :fk_id :model.fk/id]
+                                          [:= :name :model/name]}}}
+                   :transformation [:my-model :my/model
+                                    [:id :model/id]
+                                    [:name :model/name]
+                                    [:fk_id :model.fk/id]]})
+
+(def db (get-my-ez-database-db))
+
+;; insert some new data, takes [model db values]
+(crud/insert MyModel db {:model/name "Test" :model.fk/id 1})
+;; select data, takes [model db constraints]
+;; constraints will look in the constraints for the model and match based on keys and from there apply
+;; the equality operation and which column to match
+(crud/select MyModel db {:model.fk/id 1})
+;; takes [model db constraints value]
+(crud/update MyModel db {:model.fk/id 1} {:model/name "Not my name"})
+;; takes [model db constraints]
+(crud/delete MyModel db {:model.fk/id 1 :model/name "Test"})
+
+```
+
 
 ## post and pre functions
 
@@ -288,14 +336,14 @@ Core now has the multimethods of post-query and pre-query. These functions are r
 post and pre functions are applied using an opts map.
 
 ```clojure
- (db/query db 
-           :^opts {[:remove-ks :post] #{:id}} 
-           :db-key 
+ (db/query db
+           :^opts {[:remove-ks :post] #{:id}}
+           :db-key
            {:select [:*]
             :from [:test]})
 ```
 
-Ez-database comes with the following pre-defined functions. 
+Ez-database comes with the following pre-defined functions.
 
 - [:remove-ks :post] #{:ks :in :here}
 - [:remove-ks :pre] #{:ks :in :here}
@@ -338,7 +386,7 @@ One pre and post function is :transformation which can transform the values of i
                [:id         ::user/id]
                [:first_name ::user/first-name]
                [:last_name  ::user/last-name])
-               
+
 (let [db (get-db)]
   (db/query db
             ;; transformations can use [:transformation :pre]
@@ -346,14 +394,14 @@ One pre and post function is :transformation which can transform the values of i
             ;; pre is applied to any args sent in to the db
             ;; and post is applied to any values retrieved from the
             ;; database
-            ^:opts {[:transformation :post] 
-                    [:user ::user/user] 
+            ^:opts {[:transformation :post]
+                    [:user ::user/user]
                     ;; an optional opts map can
                     ;; be sent in to the transformation
                     { ;; allow nil values? defaults to true
                       ;; can be set to boolean or a set of keywords
                      :nil #{:foo :bar :baz} ;; <-- will be allowed to be nil
-                                      
+
                       ;; optional validation against a spec
                      :validation ::user/user}]}
             {:select [:id :first_name :last_name]
@@ -367,7 +415,7 @@ You can register queries with `register-query!`.
 ```clojure
 (myns
   (:require [ez-database.core :as db]))
- 
+
 
 ;; the query must be a keyword, and must start with :query
 ;; the reason it must start with :query is that a keyword is
@@ -378,11 +426,11 @@ You can register queries with `register-query!`.
    {:select [:*]
     :from [:auth_user]
     :where [:= :id #sql/param :id]}])
-    
+
 
 ;; if you no longer want it, unregister it
 (db/unregister-query! :query.user/get-user-by-id)
-  
+
 ```
 
 ## License
