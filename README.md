@@ -7,6 +7,7 @@ Out of the box ez-database supports:
   - [HoneySQL](https://github.com/jkk/honeysql)
   - [YeSQL](https://github.com/krisajenkins/yesql)
 - Advanced zipper functionality for easily building up a HoneySQL query
+- Simple CRUD operations via optionally modeling the tables in the database
 - Optional registry for registering queries
 - Optional transformation for transforming entries/results into something more reasonable
 - Optional pre/post functions for data coming in or out
@@ -316,14 +317,25 @@ happily avoid nil values which will be interpreted by HoneySQL as NULL. Use toge
 (def db (get-my-ez-database-db))
 
 ;; insert some new data, takes [model db values]
-(crud/insert MyModel db {:model/name "Test" :model.fk/id 1})
+;; this will genereate {:insert-into :my_table :values [{:name "Test" :fk_id 1}]}
+;; it will return [{:model/id 1 :model/name "Test" :model.fk/id 1}]
+(crud/insert MyModel db [{:model/name "Test" :model.fk/id 1}])
+
 ;; select data, takes [model db constraints]
 ;; constraints will look in the constraints for the model and match based on keys and from there apply
 ;; the equality operation and which column to match
+;; this will generate {:select [:*] :from [:my_table] :where [:= :fk_id 1]}
+;; it will return [{:model/id 1 :model/name "Test" :model.fk/id 1}]
 (crud/select MyModel db {:model.fk/id 1})
+
 ;; takes [model db constraints value]
+;; this will generate {:update :my_table :set {:name "Not my name"} :where [:= :fk_id 1]}
+;; this will return number of rows affected
 (crud/update MyModel db {:model.fk/id 1} {:model/name "Not my name"})
+
 ;; takes [model db constraints]
+;; this will generate {:delete-from :my_table :where [:and [:= :fk_id 1] [:= :name "Test"]]}
+;; this will return number of rows affected
 (crud/delete MyModel db {:model.fk/id 1 :model/name "Test"})
 
 ```
