@@ -34,7 +34,7 @@ Out of the box ez-database supports:
 
 Download from clojars
 ```clojure
-[ez-database "0.8.0-rc1"]
+[ez-database "0.8.1"]
 ```
 
 Assuming a database with the following schema.
