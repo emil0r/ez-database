@@ -1,6 +1,5 @@
 (ns ez-database.test.queries
-  (:require [clojure.java.jdbc :as jdbc]
-            [ez-database.core :as db]
+  (:require [ez-database.core :as db]
             [ez-database.test.core :refer [reset-db! db-spec db-spec-2]]
             [midje.sweet :refer :all]
             [yesql.core :refer [defqueries]]))
