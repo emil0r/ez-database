@@ -1,6 +1,6 @@
 (ns ez-database.core
-  (:require [clojure.string :as str]
-            [clojure.java.jdbc :as jdbc]
+  (:require [clojure.java.jdbc :as jdbc]
+            [clojure.string :as str]
             [ez-database.transform :as transform]
             [honeysql.core :as honeysql]))
 
@@ -306,7 +306,7 @@
     ([query db args]
      (throw-msg "Sequence is not allowed for query<!")))
 
-  clojure.lang.PersistentArrayMap
+  clojure.lang.IPersistentMap
   (run-query
     ([query db]
      (jdbc/query db (honeysql/format query)))
@@ -321,32 +321,11 @@
     ([query db]
      (let [table (:insert-into query)
            values (:values query)]
-       (apply jdbc/insert! db table values)))
+       (jdbc/insert-multi! db table values)))
     ([query db args]
      (let [table (:insert-into query)
            values (:values query)]
-       (apply jdbc/insert! db table values))))
-
-  clojure.lang.PersistentHashMap
-  (run-query
-    ([query db]
-     (jdbc/query db (honeysql/format query)))
-    ([query db args]
-     (jdbc/query db (honeysql/format query args))))
-  (run-query!
-    ([query db]
-     (jdbc/execute! db (honeysql/format query)))
-    ([query db args]
-     (jdbc/execute! db (honeysql/format query args))))
-  (run-query<!
-    ([query db]
-     (let [table (:insert-into query)
-           values (:values query)]
-       (apply jdbc/insert! db table values)))
-    ([query db args]
-     (let [table (:insert-into query)
-           values (:values query)]
-       (apply jdbc/insert! db table values))))
+       (jdbc/insert-multi! db table values))))
 
   clojure.lang.Fn
   (run-query
