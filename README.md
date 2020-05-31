@@ -407,7 +407,7 @@ One pre and post function is :transformation which can transform the values of i
             ;; and post is applied to any values retrieved from the
             ;; database
             ^:opts {[:transformation :post]
-                    [:user ::user/user]
+                    [:user ::user/user
                     ;; an optional opts map can
                     ;; be sent in to the transformation
                     { ;; allow nil values? defaults to true
@@ -415,7 +415,7 @@ One pre and post function is :transformation which can transform the values of i
                      :nil #{:foo :bar :baz} ;; <-- will be allowed to be nil
 
                       ;; optional validation against a spec
-                     :validation ::user/user}]}
+                     :validation ::user/user}]]}
             {:select [:id :first_name :last_name]
              :from [:users]}))
 ```
