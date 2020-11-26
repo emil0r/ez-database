@@ -222,4 +222,23 @@
                                                           {:id 4}
                                                           {:id "5" :foobar "Asdf"}]})
                (catch Exception e
-                 (count (:messages (ex-data e))))) => 2)))
+                 (count (:messages (ex-data e))))) => 2)
+        (fact "error-maps"
+              (fact "no args"
+                    (try
+                      (db/query! db {:insert-into :does-not-exist :values [{:id 1}]})
+                      (catch Exception e
+                        (let [data (ex-data e)]
+                          (every? #{:type :exception :messages :query :generated-query} (keys data)) => true))))
+              (fact "with args"
+                    (try
+                      (db/query! db {:insert-into :does-not-exist :values [{:id 1}]} {:my :args})
+                      (catch Exception e
+                        (let [data (ex-data e)]
+                          (every? #{:type :exception :messages :query :args :generated-query} (keys data)) => true))))
+              (fact "generated-query is a string with the correct info"
+                    (try
+                      (db/query! db {:insert-into :does-not-exist :values [{:id 1}]})
+                      (catch Exception e
+                        (let [{:keys [generated-query]} (ex-data e)]
+                          generated-query => ["INSERT INTO does_not_exist (id) VALUES (?)" 1])))))))

@@ -227,26 +227,34 @@
                  nil))
              (inc breakpoint)))))
 
+(defn- generated-query [query]
+  (if (map? query)
+    {:generated-query (honeysql/format query)}))
+
 (defmacro try-query [& body]
   `(try
      ~@body
      (catch Exception ~'e
        (throw (ex-info "ez-database try-query failed"
-                       {:type ::try-query
-                        :exception ~'e
-                        :messages (get-causes-messages ~'e)
-                        :query ~'-query})))))
+                       (merge
+                        {:type ::try-query
+                         :exception ~'e
+                         :messages (get-causes-messages ~'e)
+                         :query ~'-query}
+                        (generated-query ~'-query)))))))
 
 (defmacro try-query-args [& body]
   `(try
      ~@body
      (catch Exception ~'e
        (throw (ex-info "ez-database try-query-args failed"
-                       {:type ::try-query-args
-                        :exception ~'e
-                        :messages (get-causes-messages ~'e)
-                        :query ~'-query
-                        :args ~'args})))))
+                       (merge
+                        {:type ::try-query-args
+                         :exception ~'e
+                         :messages (get-causes-messages ~'e)
+                         :query ~'-query
+                         :args ~'args}
+                        (generated-query ~'-query)))))))
 
 (defn throw-msg [msg & args]
   (throw (ex-info msg
