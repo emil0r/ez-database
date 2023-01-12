@@ -1,6 +1,6 @@
 (ns ez-database.builder
   (:require [ez-database.query :as query]
-            [honeysql.helpers :as sql.helpers]))
+            [honey.sql.helpers :as sql.helpers]))
 
 (defn- build-equality [constraint data]
   (let [[eq col k] (if (= (count constraint) 3)

@@ -1,7 +1,7 @@
 (ns ez-database.test.query
   (:require [clojure.zip :as zip]
-            [honeysql.core :as sql]
-            [honeysql.helpers :as sql.helpers]
+            [honey.sql :as sql]
+            [honey.sql.helpers :as sql.helpers]
             [ez-database.query :refer [optional clean swap]]
             [ez-database.query.zipper :as query.zipper]
             [midje.sweet :refer :all]))

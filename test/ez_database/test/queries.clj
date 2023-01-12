@@ -187,7 +187,7 @@
          (when reset-db?
            (reset-db!))
 
-         (db/query db {:select [:*] :from [:test] :where [:= :id #sql/param :id]} {:id 0})
+         (db/query db {:select [:*] :from [:test] :where [:= :id [:param :id]]} {:params {:id 0}})
          => [{:id 0}])
 
    (fact "registering"
@@ -197,9 +197,9 @@
          (fact "honeysql"
                (db/register-query! :query/testus1 [nil nil {:select [:*]
                                                             :from [:test]
-                                                            :where [:> :id #sql/param :id]}])
-               
-               (->> {:id 1}
+                                                            :where [:> :id [:param :id]]}])
+
+               (->> {:params {:id 1}}
                     (db/query db :query/testus1)
                     (map :id))
                => [42])

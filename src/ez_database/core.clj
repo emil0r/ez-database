@@ -2,7 +2,7 @@
   (:require [clojure.java.jdbc :as jdbc]
             [clojure.string :as str]
             [ez-database.transform :as transform]
-            [honeysql.core :as honeysql]))
+            [honey.sql :as honeysql]))
 
 
 (defprotocol IEzDatabase
