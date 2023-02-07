@@ -49,9 +49,8 @@ INSERT INTO test VALUES (0), (42);
 ```clojure
 (require '[ez-database.core :as db])
 
-(def db-spec {:classname "org.postgresql.Driver"
-              :subprotocol "postgresql"
-              :subname "//localhost:5432/test"
+(def db-spec {:dbtype "postgres"
+              :dbname "testdb"
               :user "user"
               :password "password"})
 
@@ -447,7 +446,7 @@ You can register queries with `register-query!`.
 
 ## License
 
-Copyright © 2015-2020 Emil Bengtsson
+Copyright © 2015-2022 Emil Bengtsson
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
