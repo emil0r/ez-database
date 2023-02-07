@@ -1,7 +1,8 @@
 (ns ez-database.core
-  (:require [clojure.java.jdbc :as jdbc]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [ez-database.transform :as transform]
+            [next.jdbc :as jdbc]
+            [next.jdbc.sql :as sql]
             [honey.sql :as honeysql]))
 
 
@@ -203,12 +204,12 @@
     *connection*
     (get db-specs key)))
 
-(defmacro with-transaction [binding & body]
-  `(jdbc/db-transaction* (get-connection (:db-specs (first ~binding)) (second ~binding))
-                         (^{:once true} fn* [~'con]
-                          (binding [*connection* ~'con]
-                            ~@body))
-                         ~@(rest (rest binding))))
+(defmacro with-transaction [[db k opts :as binding] & body]
+  `(jdbc/transact (get-connection (:db-specs ~db) ~k)
+                   (^{:once true} fn* [~'con]
+                    (binding [*connection* ~'con]
+                      ~@body)
+                    ~(or opts {}))))
 
 (defn- get-causes-messages [e]
   (loop [msg []
@@ -261,6 +262,18 @@
                   {:type ::error-msg
                    :args args})))
 
+(defn- prep-insert-multi! [query]
+  (let [table (:insert-into query)
+        [columns values] (let [values (:values query)
+                               ?columns (first values)]
+                           (cond (map? ?columns)
+                                 [(keys ?columns) (map vals values)]
+                                 (sequential? ?columns)
+                                 [?columns (rest values)]
+                                 :else
+                                 nil))]
+    [table columns values]))
+
 (extend-protocol IEzQuery
 
   nil
@@ -283,9 +296,9 @@
   java.lang.String
   (run-query
     ([query db]
-     (jdbc/query db [query]))
+     (jdbc/execute! db [query]))
     ([query db args]
-     (jdbc/query db (concat [query] args))))
+     (jdbc/execute! db (concat [query] args))))
   (run-query!
     ([query db]
      (jdbc/execute! db [query]))
@@ -293,16 +306,16 @@
      (jdbc/execute! db (concat [query] args))))
   (run-query<!
     ([query db]
-     (throw-msg "String without args is not allowed for query<!"))
+     (throw-msg "String is not allowed for query<!"))
     ([query db args]
-     (apply jdbc/insert! db query args)))
+     (throw-msg "String is not allowed for query<!")))
 
   clojure.lang.Sequential
   (run-query
     ([query db]
-     (jdbc/query db query))
+     (jdbc/execute! db query))
     ([query db args]
-     (jdbc/query db (concat query args))))
+     (jdbc/execute! db (concat query args))))
   (run-query!
     ([query db]
      (jdbc/execute! db query))
@@ -317,9 +330,9 @@
   clojure.lang.IPersistentMap
   (run-query
     ([query db]
-     (jdbc/query db (honeysql/format query)))
+     (jdbc/execute! db (honeysql/format query)))
     ([query db args]
-     (jdbc/query db (honeysql/format query args))))
+     (jdbc/execute! db (honeysql/format query args))))
   (run-query!
     ([query db]
      (jdbc/execute! db (honeysql/format query)))
@@ -327,33 +340,31 @@
      (jdbc/execute! db (honeysql/format query args))))
   (run-query<!
     ([query db]
-     (let [table (:insert-into query)
-           values (:values query)]
-       (jdbc/insert-multi! db table values)))
+     (let [[table columns values] (prep-insert-multi! query)]
+       (sql/insert-multi! db table columns values)))
     ([query db args]
-     (let [table (:insert-into query)
-           values (:values query)]
-       (jdbc/insert-multi! db table values))))
+     (let [[table columns values] (prep-insert-multi! query)]
+       (sql/insert-multi! db table columns values args))))
 
   clojure.lang.Fn
   (run-query
     ([query db]
-     (query {} {:connection db}))
+     (query db {}))
     ([query db args]
-     (query args {:connection db})))
+     (query db args)))
   (run-query!
     ([query db]
-     (query {} {:connection db}))
+     (query db {}))
     ([query db args]
-     (query args {:connection db})))
+     (query db args)))
   (run-query<!
     ([query db]
-     (query {} {:connection db}))
+     (query db {}))
     ([query db args]
-     (query args {:connection db}))))
+     (query db args))))
 
 
-(defrecord EzDatabase [db-specs ds-specs]
+(defrecord EzDatabase [db-specs]
   IEzDatabase
 
   (query [db -query]
@@ -363,7 +374,7 @@
        (run-query -query (get-connection db-specs :default)))))
 
   (query [db opts-key? -query]
-    (let [[-query opts key args :as asdf] (get-args db opts-key? opts-key? opts-key? -query)]
+    (let [[-query opts key args] (get-args db opts-key? opts-key? opts-key? -query)]
       (try-query-args
        (run-post-query db opts
                        (if (nil? args)
