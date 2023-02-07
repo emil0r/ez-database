@@ -6,19 +6,22 @@
 
 
 
-(defn run [target & args]
-  (let [db-spec (-> target :db :db-spec)]
-    (jdbc/insert-multi! db-spec "test" [:id] [[0] [42]])))
+(def db-spec-jdbc {:classname "org.postgresql.Driver"
+                   :subprotocol "postgresql"
+                   :subname "//localhost:5432/ezdb1"
+                   :user "postgres"
+                   :password "postgres"})
 
-(def db-spec {:classname "org.postgresql.Driver"
-              :subprotocol "postgresql"
-              :subname "//localhost:5432/ezdb1"
+(defn run [target & args]
+  (jdbc/insert-multi! db-spec-jdbc "test" [:id] [[0] [42]]))
+
+(def db-spec {:dbtype "postgres"
+              :dbname "ezdb1"
               :user "postgres"
               :password "postgres"})
 
-(def db-spec-2 {:classname "org.postgresql.Driver"
-                :subprotocol "postgresql"
-                :subname "//localhost:5432/ezdb2"
+(def db-spec-2 {:dbtype "postgres"
+                :dbname "ezdb2"
                 :user "postgres"
                 :password "postgres"})
 
