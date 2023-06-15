@@ -2,9 +2,9 @@
   (:require [clojure.string :as str]
             [ez-database.transform :as transform]
             [next.jdbc :as jdbc]
+            [next.jdbc.result-set :as rs]
             [next.jdbc.sql :as sql]
             [honey.sql :as honeysql]))
-
 
 (defprotocol IEzDatabase
   (query [database query] [database opts-key? query] [database opts? key? query] [database opts key query args])
@@ -193,9 +193,9 @@
       [-query opts (or key :default) -args])))
 
 (defprotocol IEzQuery
-  (run-query [query database] [query database args])
-  (run-query! [query database] [query database args])
-  (run-query<! [query database] [query database args]))
+  (run-query [query database opts] [query database opts args])
+  (run-query! [query database opts] [query database opts args])
+  (run-query<! [query database opts] [query database opts args]))
 
 (def ^:dynamic *connection* nil)
 
@@ -278,142 +278,142 @@
 
   nil
   (run-query
-    ([query db]
+    ([query db opts]
      (throw-msg "nil can't be run as a query"))
-    ([query db args]
+    ([query db opts args]
      (throw-msg "nil can't be run as a query")))
   (run-query!
-    ([query db]
+    ([query db opts]
      (throw-msg "nil can't be run as a query!"))
-    ([query db args]
+    ([query db opts args]
      (throw-msg "nil can't be run as a query!")))
   (run-query<!
-    ([query db]
+    ([query db opts]
      (throw-msg "nil can't be run as a query<!"))
-    ([query db args]
+    ([query db opts args]
      (throw-msg "nil can't be run as a query<!")))
 
   java.lang.String
   (run-query
-    ([query db]
-     (jdbc/execute! db [query]))
-    ([query db args]
-     (jdbc/execute! db (concat [query] args))))
+    ([query db opts]
+     (jdbc/execute! db [query] opts))
+    ([query db opts args]
+     (jdbc/execute! db (concat [query] args) opts)))
   (run-query!
-    ([query db]
-     (jdbc/execute! db [query]))
-    ([query db args]
-     (jdbc/execute! db (concat [query] args))))
+    ([query db opts]
+     (jdbc/execute! db [query] opts))
+    ([query db opts args]
+     (jdbc/execute! db (concat [query] args) opts)))
   (run-query<!
-    ([query db]
+    ([query db opts]
      (throw-msg "String is not allowed for query<!"))
-    ([query db args]
+    ([query db opts args]
      (throw-msg "String is not allowed for query<!")))
 
   clojure.lang.Sequential
   (run-query
-    ([query db]
-     (jdbc/execute! db query))
-    ([query db args]
-     (jdbc/execute! db (concat query args))))
+    ([query db opts]
+     (jdbc/execute! db query opts))
+    ([query db opts args]
+     (jdbc/execute! db (concat query args) opts)))
   (run-query!
-    ([query db]
-     (jdbc/execute! db query))
-    ([query db args]
-     (jdbc/execute! db (concat query args))))
+    ([query db opts]
+     (jdbc/execute! db query opts))
+    ([query db opts args]
+     (jdbc/execute! db (concat query args) opts)))
   (run-query<!
-    ([query db]
+    ([query db opts]
      (throw-msg "Sequence is not allowed for query<!"))
-    ([query db args]
+    ([query db opts args]
      (throw-msg "Sequence is not allowed for query<!")))
 
   clojure.lang.IPersistentMap
   (run-query
-    ([query db]
-     (jdbc/execute! db (honeysql/format query)))
-    ([query db args]
-     (jdbc/execute! db (honeysql/format query args))))
+    ([query db opts]
+     (jdbc/execute! db (honeysql/format query) opts))
+    ([query db opts args]
+     (jdbc/execute! db (honeysql/format query args) opts)))
   (run-query!
-    ([query db]
-     (jdbc/execute! db (honeysql/format query)))
-    ([query db args]
-     (jdbc/execute! db (honeysql/format query args))))
+    ([query db opts]
+     (jdbc/execute! db (honeysql/format query) opts))
+    ([query db opts args]
+     (jdbc/execute! db (honeysql/format query args) opts)))
   (run-query<!
-    ([query db]
+    ([query db opts]
      (let [[table columns values] (prep-insert-multi! query)]
        (sql/insert-multi! db table columns values)))
-    ([query db args]
+    ([query db opts args]
      (let [[table columns values] (prep-insert-multi! query)]
        (sql/insert-multi! db table columns values args))))
 
   clojure.lang.Fn
   (run-query
-    ([query db]
+    ([query db opts]
      (query db {}))
-    ([query db args]
+    ([query db opts args]
      (query db args)))
   (run-query!
-    ([query db]
+    ([query db opts]
      (query db {}))
-    ([query db args]
+    ([query db opts args]
      (query db args)))
   (run-query<!
-    ([query db]
+    ([query db opts]
      (query db {}))
-    ([query db args]
+    ([query db opts args]
      (query db args))))
 
 
-(defrecord EzDatabase [db-specs]
+(defrecord EzDatabase [db-specs ezdb-opts]
   IEzDatabase
 
   (query [db -query]
     (try-query
      (if (keyword? -query)
        (apply query db (get-query -query))
-       (run-query -query (get-connection db-specs :default)))))
+       (run-query -query (get-connection db-specs :default) ezdb-opts))))
 
   (query [db opts-key? -query]
     (let [[-query opts key args] (get-args db opts-key? opts-key? opts-key? -query)]
       (try-query-args
        (run-post-query db opts
                        (if (nil? args)
-                         (run-query -query (get-connection db-specs key))
-                         (run-query -query (get-connection db-specs key) args))))))
+                         (run-query -query (get-connection db-specs key) ezdb-opts)
+                         (run-query -query (get-connection db-specs key) ezdb-opts args))))))
 
   (query [db opts? key? -query]
     (let [[-query opts key args] (get-args db key? opts? key? -query)]
       (try-query-args
-       (run-post-query db opts
+       (run-post-query db ezdb-opts opts
                        (if (nil? args)
-                         (run-query -query (get-connection db-specs key))
-                         (run-query -query (get-connection db-specs key) args))))))
+                         (run-query -query (get-connection db-specs key) ezdb-opts)
+                         (run-query -query (get-connection db-specs key) ezdb-opts args))))))
 
   (query [db opts key -query args]
     (let [opts (get-opts opts)]
       (try-query-args
-       (run-post-query db opts
+       (run-post-query db ezdb-opts opts
                        (run-query -query (get-connection db-specs key) (run-process-args db opts args))))))
 
   (query! [db -query]
     (try-query
      (if (keyword? -query)
        (apply query! db (get-query -query))
-       (run-query! -query (get-connection db-specs :default)))))
+       (run-query! -query (get-connection db-specs :default) ezdb-opts))))
 
   (query! [db opts-key? -query]
     (let [[-query opts key args] (get-args db opts-key? opts-key? opts-key? -query)]
       (try-query
        (if (nil? args)
-         (run-query! -query (get-connection db-specs key))
-         (run-query! -query (get-connection db-specs key) args)))))
+         (run-query! -query (get-connection db-specs key) ezdb-opts)
+         (run-query! -query (get-connection db-specs key) ezdb-opts args)))))
 
   (query! [db opts? key? -query]
     (let [[-query opts key args] (get-args db key? opts? key? -query)]
       (try-query
        (if (nil? args)
-         (run-query! -query (get-connection db-specs key))
-         (run-query! -query (get-connection db-specs key) args)))))
+         (run-query! -query (get-connection db-specs key) ezdb-opts)
+         (run-query! -query (get-connection db-specs key) ezdb-opts args)))))
 
   (query! [db opts key -query args]
     (try-query-args
@@ -423,29 +423,29 @@
     (try-query
      (if (keyword? -query)
        (apply query<! db (get-query -query))
-       (run-query<! -query (get-connection db-specs :default)))))
+       (run-query<! -query (get-connection db-specs :default) ezdb-opts))))
   (query<! [db opts-key? -query]
     (let [[-query opts key args] (get-args db opts-key? opts-key? opts-key? -query)]
       (try-query-args
        (run-post-query
         db opts
         (if (nil? args)
-          (run-query<! -query (get-connection db-specs key))
-          (run-query<! -query (get-connection db-specs key) args))))))
+          (run-query<! -query (get-connection db-specs key) ezdb-opts)
+          (run-query<! -query (get-connection db-specs key) ezdb-opts args))))))
   (query<! [db opts? key? -query]
     (let [[-query opts key args] (get-args db key? opts? key? -query)]
       (try-query-args
        (run-post-query
         db opts
         (if (nil? args)
-          (run-query<! -query (get-connection db-specs key))
-          (run-query<! -query (get-connection db-specs key) args))))))
+          (run-query<! -query (get-connection db-specs key) ezdb-opts)
+          (run-query<! -query (get-connection db-specs key) ezdb-opts args))))))
   (query<! [db opts key -query args]
     (let [opts (get-opts opts)]
       (try-query-args
        (run-post-query
         db opts
-        (run-query<! -query (get-connection db-specs key) (run-process-args db opts args))))))
+        (run-query<! -query (get-connection db-specs key) ezdb-opts (run-process-args db opts args))))))
 
   (databases [db]
     (keys db-specs)))

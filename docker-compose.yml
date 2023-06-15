@@ -6,7 +6,7 @@ services:
           - .docker/postgresql:/var/lib/postgresql/data
           - ./scripts:/docker-entrypoint-initdb.d
         ports:
-          - '5432:5432'
+          - '8432:5432'
         environment:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

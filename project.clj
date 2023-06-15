@@ -1,4 +1,4 @@
-(defproject ez-database "2.0.0-alpha1"
+(defproject ez-database "2.0.0-SNAPSHOT"
 
   :description "Handling database queries with ease"
 
